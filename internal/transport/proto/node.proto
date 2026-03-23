@@ -1,0 +1,45 @@
+// Module: Transport
+// Phase: Foundation
+// Purpose: Defines foundational gRPC APIs shared by all nodes.
+// Extended in later phases by concrete consensus and replication fields.
+syntax = "proto3";
+
+package node;
+
+option go_package = "distributed-messaging-system/internal/transport/proto";
+
+service NodeService {
+  // SendMessage delivers a message payload from one node to another.
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+
+  // Heartbeat reports node liveness for basic health checks.
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+
+  // RequestVote is a placeholder RPC for a future leader election phase.
+  rpc RequestVote(RequestVoteRequest) returns (RequestVoteResponse);
+}
+
+message SendMessageRequest {
+  string from_node_id = 1;
+  bytes payload = 2;
+}
+
+message SendMessageResponse {
+  bool accepted = 1;
+}
+
+message HeartbeatRequest {
+  string node_id = 1;
+}
+
+message HeartbeatResponse {
+  bool ok = 1;
+}
+
+message RequestVoteRequest {
+  string candidate_id = 1;
+}
+
+message RequestVoteResponse {
+  bool vote_granted = 1;
+}

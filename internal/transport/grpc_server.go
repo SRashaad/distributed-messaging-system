@@ -1,26 +1,7 @@
-// =============================================================================
 // Module: Transport
-// File: grpc_server.go
-// Responsible Member: All Members (Shared Infrastructure)
-// Purpose: gRPC server that listens for incoming RPCs from peers and clients.
-//          This is the network entry point for the node. It receives:
-//            - RequestVote RPCs (from candidates during elections)
-//            - AppendEntries RPCs (from the leader for replication/heartbeats)
-//            - Publish/Consume RPCs (from clients)
-//          and delegates them to the appropriate module.
-//
-// Connections:
-//   - Delegates consensus RPCs to internal/consensus/raft.go.
-//   - Delegates messaging RPCs to internal/node/node.go.
-//   - Reports received heartbeats to internal/fault/detector.go.
-//   - Proto definitions are in internal/transport/proto/messaging.proto.
-//   - Started by internal/node/node.go during initialization.
-//
-// Implementation notes:
-//   - Uses google.golang.org/grpc for the gRPC framework.
-//   - Register service handlers (ConsensusService, MessagingService)
-//     defined in the proto file.
-// =============================================================================
+// Phase: Foundation
+// Purpose: Provides a minimal gRPC server wrapper used by node startup.
+// Extended in later phases by full RPC registration and request handling.
 package transport
 
 // Server wraps a gRPC server with node-specific configuration.
@@ -37,7 +18,7 @@ type Server struct {
 //
 // TODO: Initialize a grpc.Server and store the port.
 func NewServer(port int) *Server {
-	return nil
+	return &Server{port: port}
 }
 
 // RegisterConsensusHandler registers the consensus module as the handler
@@ -64,6 +45,7 @@ func (s *Server) RegisterMessagingHandler() {
 //   2. Register all service handlers.
 //   3. Call grpcServer.Serve(listener) — this blocks.
 func (s *Server) Start() error {
+	_ = s.port // TODO: Bind listener and start grpc.Server.Serve.
 	return nil
 }
 
