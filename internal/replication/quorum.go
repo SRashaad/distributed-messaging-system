@@ -35,26 +35,45 @@ type QuorumTracker struct {
 //
 // TODO: Initialize all fields and compute the majority threshold.
 func NewQuorumTracker(clusterSize int) *QuorumTracker {
-	return nil
+	if clusterSize <= 0 {
+		clusterSize = 1
+	}
+
+	return &QuorumTracker{
+		clusterSize: clusterSize,
+		majority:    (clusterSize / 2) + 1,
+		acks:        make(map[uint64]map[string]bool),
+	}
 }
 
 // RecordAck records that a follower has acknowledged (stored) the entry
 // at the given log index. Called when an AppendEntries response arrives
 // with Success=true.
 //
-// TODO: Create the inner map if it doesn't exist, then set acks[index][nodeID]=true.
+// TODO: Create the inner map if it doesn't exist, then set acks[index][nodeID] = true.
 func (q *QuorumTracker) RecordAck(index uint64, nodeID string) {
-	// TODO: implement
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	// create map for this index if missing
+	if q.acks[index] == nil {
+		q.acks[index] = make(map[string]bool)
+	}
+
+	// record ack
+	q.acks[index][nodeID] = true
 }
 
 // HasQuorum returns true if the number of acknowledgments for the given
 // index meets or exceeds the majority threshold.
-// This is the commit condition: once HasQuorum returns true, the entry
-// can be safely committed.
+// This is the commit condition.
 //
 // TODO: Compare len(acks[index]) against q.majority.
 func (q *QuorumTracker) HasQuorum(index uint64) bool {
-	return false
+	q.mu.RLock()
+	defer q.mu.RUnlock()
+
+	return len(q.acks[index]) >= q.majority
 }
 
 // AckCount returns the number of acknowledgments received so far for
@@ -62,14 +81,23 @@ func (q *QuorumTracker) HasQuorum(index uint64) bool {
 //
 // TODO: Return len(acks[index]) with proper locking.
 func (q *QuorumTracker) AckCount(index uint64) int {
-	return 0
+	q.mu.RLock()
+	defer q.mu.RUnlock()
+
+	return len(q.acks[index])
 }
 
 // Cleanup removes tracking data for indices at or below the given index.
-// Should be called periodically after entries are committed to prevent
-// unbounded memory growth.
+// Prevents unbounded memory growth.
 //
 // TODO: Iterate over acks and delete entries where idx <= belowIndex.
 func (q *QuorumTracker) Cleanup(belowIndex uint64) {
-	// TODO: implement
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	for idx := range q.acks {
+		if idx <= belowIndex {
+			delete(q.acks, idx)
+		}
+	}
 }
