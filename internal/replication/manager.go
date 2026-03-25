@@ -43,6 +43,7 @@ type Manager struct {
 
 	// TODO: Add a transport.PeerClient field for sending AppendEntries RPCs.
 	// TODO: Add a list of peer addresses to iterate over during replication.
+	peers []string // list of follower IDs or addresses (mock)
 }
 
 // NewManager creates a new ReplicationManager.
@@ -50,7 +51,11 @@ type Manager struct {
 // TODO: Initialize with the given log and a QuorumTracker sized for clusterSize.
 //       Also accept a transport reference for sending RPCs.
 func NewManager(log ReplicatedLog, clusterSize int) *Manager {
-	return nil
+	return &Manager{
+		log:    log,
+		quorum: NewQuorumTracker(clusterSize),
+		peers:  []string{}, // placeholder until real transport available
+	}
 }
 
 // ReplicateEntry appends an entry to the local log and initiates
@@ -62,6 +67,30 @@ func NewManager(log ReplicatedLog, clusterSize int) *Manager {
 //   3. When a follower responds with Success=true, call quorum.RecordAck().
 //   4. Return any errors from the local append.
 func (m *Manager) ReplicateEntry(entry consensus.LogEntry) error {
+
+	// 1. Append locally
+	index, err := m.log.Append(entry)
+	if err != nil {
+		return err
+	}
+
+	// Leader counts as an ACK immediately
+	m.quorum.RecordAck(index, "leader")
+
+	// 2. For each follower, send AppendEntries (mocked as success)
+	for _, peer := range m.peers {
+		p := peer // capture for goroutine
+		go func() {
+			// ---- MOCK: Simulate RPC success ----
+			time.Sleep(10 * time.Millisecond) // pretend network delay
+			// In real implementation, call transport.AppendEntries(p, entry)
+			// ------------------------------------
+
+			// 3. Record acknowledgment
+			m.quorum.RecordAck(index, p)
+		}()
+	}
+
 	return nil
 }
 
@@ -73,5 +102,15 @@ func (m *Manager) ReplicateEntry(entry consensus.LogEntry) error {
 //   2. Return true if quorum is reached before the timeout.
 //   3. Return false if the timeout expires without quorum.
 func (m *Manager) WaitForQuorum(index uint64, timeout time.Duration) (bool, error) {
+
+	deadline := time.Now().Add(timeout)
+
+	for time.Now().Before(deadline) {
+		if m.quorum.HasQuorum(index) {
+			return true, nil
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
 	return false, nil
 }

@@ -23,51 +23,38 @@
 package replication
 
 import (
+	"errors"
 	"sync"
 
 	"distributed-messaging-system/internal/consensus"
 )
 
 // ReplicatedLog defines the interface for the append-only replicated log.
-// Both the leader and followers maintain their own copy of this log.
 type ReplicatedLog interface {
-	// Append adds a new entry to the end of the log.
 	Append(entry consensus.LogEntry) error
-
-	// GetEntry returns the log entry at the given 1-based index.
 	GetEntry(index uint64) (consensus.LogEntry, error)
-
-	// GetEntriesFrom returns all entries starting from the given index (inclusive).
-	// Used during replication and recovery to send batches of entries.
 	GetEntriesFrom(index uint64) ([]consensus.LogEntry, error)
-
-	// LastIndex returns the index of the last entry, or 0 if the log is empty.
 	LastIndex() uint64
-
-	// LastTerm returns the term of the last entry, or 0 if the log is empty.
 	LastTerm() uint64
-
-	// CommitUpTo advances the commit index to the given value.
 	CommitUpTo(index uint64) error
-
-	// CommitIndex returns the current commit index.
 	CommitIndex() uint64
 }
 
 // InMemoryLog implements ReplicatedLog with an in-memory append-only store.
-// For a production system this would be backed by persistent storage,
-// but in-memory is sufficient for this academic project.
 type InMemoryLog struct {
-	mu          sync.RWMutex       // protects entries and commitIndex
-	entries     []consensus.LogEntry // the ordered log entries
-	commitIndex uint64              // highest index known to be committed
+	mu          sync.RWMutex
+	entries     []consensus.LogEntry
+	commitIndex uint64
 }
 
 // NewInMemoryLog creates a new empty replicated log.
 //
 // TODO: Initialize the entries slice and set commitIndex to 0.
 func NewInMemoryLog() *InMemoryLog {
-	return nil
+	return &InMemoryLog{
+		entries:     make([]consensus.LogEntry, 0),
+		commitIndex: 0,
+	}
 }
 
 // Append adds a new entry to the log.
@@ -75,6 +62,15 @@ func NewInMemoryLog() *InMemoryLog {
 // TODO: Validate that entry.Index equals len(entries)+1 (no gaps allowed).
 //       Then append the entry to the slice.
 func (l *InMemoryLog) Append(entry consensus.LogEntry) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	expectedIndex := uint64(len(l.entries) + 1)
+	if entry.Index != expectedIndex {
+		return errors.New("log append index mismatch: expected sequential index")
+	}
+
+	l.entries = append(l.entries, entry)
 	return nil
 }
 
@@ -82,44 +78,82 @@ func (l *InMemoryLog) Append(entry consensus.LogEntry) error {
 //
 // TODO: Validate index bounds and return entries[index-1].
 func (l *InMemoryLog) GetEntry(index uint64) (consensus.LogEntry, error) {
-	return consensus.LogEntry{}, nil
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
+	if index == 0 || index > uint64(len(l.entries)) {
+		return consensus.LogEntry{}, errors.New("log index out of range")
+	}
+
+	return l.entries[index-1], nil
 }
 
-// GetEntriesFrom returns all entries from the given index to the end of the log.
-// Used by the leader to send missing entries to followers during replication.
+// GetEntriesFrom returns all entries from the given index to the end.
 //
 // TODO: Validate index and return a copy of entries[index-1:].
 func (l *InMemoryLog) GetEntriesFrom(index uint64) ([]consensus.LogEntry, error) {
-	return nil, nil
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
+	if index == 0 || index > uint64(len(l.entries)) {
+		return nil, errors.New("log index out of range")
+	}
+
+	result := make([]consensus.LogEntry, len(l.entries[index-1:]))
+	copy(result, l.entries[index-1:])
+
+	return result, nil
 }
 
 // LastIndex returns the index of the last log entry, or 0 if empty.
 //
 // TODO: Return len(entries) as uint64.
 func (l *InMemoryLog) LastIndex() uint64 {
-	return 0
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
+	return uint64(len(l.entries))
 }
 
 // LastTerm returns the term of the last log entry, or 0 if empty.
 //
 // TODO: Return the Term field of the last entry.
 func (l *InMemoryLog) LastTerm() uint64 {
-	return 0
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
+	if len(l.entries) == 0 {
+		return 0
+	}
+
+	return l.entries[len(l.entries)-1].Term
 }
 
 // CommitUpTo advances the commit index to the given value.
-// Called when the quorum tracker confirms a majority has acknowledged.
 //
 // TODO: Validate that index does not exceed LastIndex.
 //       Set commitIndex = max(commitIndex, index).
 func (l *InMemoryLog) CommitUpTo(index uint64) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	if index > uint64(len(l.entries)) {
+		return errors.New("commit index out of bounds")
+	}
+
+	if index > l.commitIndex {
+		l.commitIndex = index
+	}
+
 	return nil
 }
 
 // CommitIndex returns the current commit index.
-// Only entries at or below this index are safe to deliver to clients.
 //
 // TODO: Return l.commitIndex with proper locking.
 func (l *InMemoryLog) CommitIndex() uint64 {
-	return 0
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
+	return l.commitIndex
 }
