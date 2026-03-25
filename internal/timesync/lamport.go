@@ -9,11 +9,11 @@ import "sync"
 // counter-based way to preserve causality ordering between events.
 type LamportClock struct {
 	mu      sync.Mutex
-	counter int
+	counter uint64
 }
 
 // Tick increments the clock by 1 for a local event and returns the new value.
-func (c *LamportClock) Tick() int {
+func (c *LamportClock) Tick() uint64 {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -25,7 +25,7 @@ func (c *LamportClock) Tick() int {
 //
 // Rule: clock = max(current, received) + 1
 // This ensures causally later events always get a larger timestamp.
-func (c *LamportClock) Update(received int) int {
+func (c *LamportClock) Update(received uint64) uint64 {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -37,7 +37,7 @@ func (c *LamportClock) Update(received int) int {
 }
 
 // Current returns the current Lamport time without modifying it.
-func (c *LamportClock) Current() int {
+func (c *LamportClock) Current() uint64 {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

@@ -2,7 +2,13 @@ package timesync
 
 import (
 	"fmt"
-	"strings"
+)
+
+// Event type constants used across time synchronization.
+const (
+	EventSend     = "SEND"
+	EventReceive  = "RECEIVE"
+	EventInternal = "INTERNAL"
 )
 
 // Event represents a timestamped action in a distributed system.
@@ -11,13 +17,13 @@ import (
 // times. Lamport timestamps provide a consistent logical timeline to compare
 // events across nodes without relying on synchronized physical clocks.
 type Event struct {
-	Type      string // "send", "receive", or "internal"
+	Type      string // use EventSend, EventReceive, or EventInternal
 	NodeID    string
-	Timestamp int
+	Timestamp uint64
 }
 
 // String returns a readable representation of the event.
 // Example: "[NodeA] SEND at time 12"
 func (e Event) String() string {
-	return fmt.Sprintf("[%s] %s at time %d", e.NodeID, strings.ToUpper(e.Type), e.Timestamp)
+	return fmt.Sprintf("[%s] %s at time %d", e.NodeID, e.Type, e.Timestamp)
 }
