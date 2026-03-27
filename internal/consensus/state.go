@@ -3,9 +3,10 @@
 // File: state.go
 // Responsible Member: Vimukthi Herath — Consensus & Agreement
 // Purpose: Defines all data structures and RPC message types used by the
-//          Raft-inspired consensus protocol. This includes node state
-//          constants, vote/append RPC requests and responses, and the
-//          shared LogEntry struct used across consensus and replication.
+//          Raft-inspired consensus protocol (backed by ZooKeeper for leader
+//          election). This includes node state constants, vote/append RPC
+//          requests and responses, and the shared LogEntry struct used
+//          across consensus and replication.
 //
 // Connections:
 //   - LogEntry is shared with internal/replication for the replicated log.
@@ -15,11 +16,13 @@
 // =============================================================================
 package consensus
 
+import "fmt"
+
 // ---------------------------------------------------------------------------
 // Node State (Raft role)
 // ---------------------------------------------------------------------------
 
-// NodeState represents the current role of a node in the Raft protocol.
+// NodeState represents the current role of a node in the consensus protocol.
 // A node is always in exactly one of three states: Follower, Candidate, or Leader.
 type NodeState int
 
@@ -28,9 +31,8 @@ const (
 	// the Leader and vote in elections. They do not issue requests on their own.
 	Follower NodeState = iota
 
-	// Candidate is a transitional state. A Follower becomes a Candidate when
-	// it suspects the Leader has failed (election timeout). It requests votes
-	// from all other nodes.
+	// Candidate is a transitional state. With ZooKeeper-based election, this
+	// state is used briefly while the node is contesting the election znode.
 	Candidate
 
 	// Leader is the active coordinator. The Leader handles all client requests,
@@ -39,9 +41,17 @@ const (
 )
 
 // String returns a human-readable name for the node state.
-// TODO: Implement a switch returning "Follower", "Candidate", or "Leader".
 func (s NodeState) String() string {
-	return ""
+	switch s {
+	case Follower:
+		return "Follower"
+	case Candidate:
+		return "Candidate"
+	case Leader:
+		return "Leader"
+	default:
+		return fmt.Sprintf("Unknown(%d)", int(s))
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -50,11 +60,6 @@ func (s NodeState) String() string {
 
 // RequestVoteRequest is sent by a Candidate to each node in the cluster
 // to request their vote during a leader election.
-// Fields:
-//   - Term:         the candidate's current term number
-//   - CandidateID:  unique identifier of the candidate
-//   - LastLogIndex: index of the candidate's last log entry (for log comparison)
-//   - LastLogTerm:  term of the candidate's last log entry (for log comparison)
 type RequestVoteRequest struct {
 	Term         uint64
 	CandidateID  string
@@ -63,9 +68,6 @@ type RequestVoteRequest struct {
 }
 
 // RequestVoteResponse is returned by a node in response to a RequestVote RPC.
-// Fields:
-//   - Term:        the responding node's current term (so the candidate can update itself)
-//   - VoteGranted: true if the responding node voted for this candidate
 type RequestVoteResponse struct {
 	Term        uint64
 	VoteGranted bool
@@ -77,13 +79,6 @@ type RequestVoteResponse struct {
 
 // AppendEntriesRequest is sent by the Leader to replicate log entries and
 // to serve as a heartbeat (when Entries is empty).
-// Fields:
-//   - Term:         leader's current term
-//   - LeaderID:     so followers can redirect clients to the leader
-//   - PrevLogIndex: index of the log entry immediately before the new ones
-//   - PrevLogTerm:  term of the PrevLogIndex entry (for consistency check)
-//   - Entries:      new log entries to append (empty = heartbeat)
-//   - LeaderCommit: leader's current commit index
 type AppendEntriesRequest struct {
 	Term         uint64
 	LeaderID     string
@@ -94,9 +89,6 @@ type AppendEntriesRequest struct {
 }
 
 // AppendEntriesResponse is returned by a Follower after processing AppendEntries.
-// Fields:
-//   - Term:    follower's current term (leader steps down if term is higher)
-//   - Success: true if the follower's log matched at PrevLogIndex/PrevLogTerm
 type AppendEntriesResponse struct {
 	Term    uint64
 	Success bool
@@ -108,11 +100,6 @@ type AppendEntriesResponse struct {
 
 // LogEntry represents a single entry in the replicated log.
 // Every message published to the system becomes a LogEntry.
-// Fields:
-//   - Index:     1-based position in the log
-//   - Term:      the leader's term when the entry was created
-//   - Timestamp: Lamport logical clock value (assigned by timesync module)
-//   - Data:      the raw message payload from the client
 type LogEntry struct {
 	Index     uint64
 	Term      uint64
