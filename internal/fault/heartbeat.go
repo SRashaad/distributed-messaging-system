@@ -9,44 +9,50 @@
 //
 // Connections:
 //   - Started by internal/consensus/raft.go when a node becomes Leader.
-//   - Stopped when the node steps down from Leader (loses election or higher term).
+//   - Stopped when the node steps down from Leader.
 //   - Uses a sendFunc provided by the transport layer to broadcast heartbeats.
 //   - Followers' FailureDetector (detector.go) resets its timer on each heartbeat.
 //
-// Key concepts:
-//   - Heartbeat interval is typically much shorter than the election timeout
-//     (e.g., 150ms heartbeat vs 300–500ms election timeout).
-//   - Heartbeats are empty AppendEntries RPCs (no log entries).
+// Note: With ZooKeeper handling leader election, heartbeats are still useful
+//       for replication commit index propagation and peer health monitoring.
 // =============================================================================
 package fault
 
 import (
 	"context"
+	"log"
 	"time"
 )
 
 // HeartbeatEmitter sends periodic heartbeats to all peers.
-// Used exclusively by the Leader to maintain authority.
 type HeartbeatEmitter struct {
 	interval time.Duration // how often to send heartbeats
-	sendFunc func()        // broadcasts a heartbeat to all peers (provided by transport)
+	sendFunc func()        // broadcasts a heartbeat to all peers
 }
 
 // NewHeartbeatEmitter creates a new emitter with the given interval.
-// sendFunc is a closure that sends an empty AppendEntries to all peers.
-//
-// TODO: Store the interval and sendFunc.
 func NewHeartbeatEmitter(interval time.Duration, sendFunc func()) *HeartbeatEmitter {
-	return nil
+	return &HeartbeatEmitter{
+		interval: interval,
+		sendFunc: sendFunc,
+	}
 }
 
 // Start begins emitting heartbeats at the configured interval.
 // Blocks until the context is cancelled (i.e., the node stops being Leader).
-//
-// TODO: Implement:
-//   1. Create a ticker at the configured interval.
-//   2. On each tick, call h.sendFunc() to broadcast a heartbeat.
-//   3. Stop when ctx.Done() is received.
 func (h *HeartbeatEmitter) Start(ctx context.Context) {
-	// TODO: implement
+	ticker := time.NewTicker(h.interval)
+	defer ticker.Stop()
+
+	log.Printf("[fault] Heartbeat emitter started (interval=%v)", h.interval)
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Printf("[fault] Heartbeat emitter stopped")
+			return
+		case <-ticker.C:
+			h.sendFunc()
+		}
+	}
 }

@@ -3,6 +3,7 @@ module distributed-messaging-system
 go 1.21
 
 require (
+	github.com/go-zookeeper/zk v1.0.3
 	google.golang.org/grpc v1.62.0
 	google.golang.org/protobuf v1.32.0
 )
