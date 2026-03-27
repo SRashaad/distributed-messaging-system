@@ -3,9 +3,8 @@
 // File: config/config.go
 // Responsible Member: All Members (Shared)
 // Purpose: Defines the configuration structure for a node in the cluster.
-//          All tunable parameters (timeouts, ports, peer addresses) are
-//          centralized here. The config is parsed from command-line flags
-//          in cmd/server/main.go and passed to internal/node.New().
+//          All tunable parameters (timeouts, ports, peer addresses, ZooKeeper)
+//          are centralized here.
 //
 // Connections:
 //   - Created in cmd/server/main.go from command-line flags.
@@ -29,51 +28,45 @@ type Config struct {
 	ElectionMinMs        int      `json:"election_min_ms"`       // minimum election timeout in ms
 	ElectionMaxMs        int      `json:"election_max_ms"`       // maximum election timeout in ms
 	ReplicationTimeoutMs int      `json:"replication_timeout_ms"` // replication timeout in ms
+	ZookeeperServers     []string `json:"zookeeper_servers"`     // ZooKeeper ensemble addresses
 }
 
 // Default returns a Config with sensible default values for local development.
-//
-// TODO: Return a Config with:
-//   NodeID="node1", Port=5001, Peers=[], HeartbeatMs=150,
-//   ElectionMinMs=300, ElectionMaxMs=500, ReplicationTimeoutMs=1000
 func Default() Config {
-	return Config{}
+	return Config{
+		NodeID:               "node1",
+		Port:                 5001,
+		Peers:                []string{},
+		HeartbeatMs:          150,
+		ElectionMinMs:        300,
+		ElectionMaxMs:        500,
+		ReplicationTimeoutMs: 1000,
+		ZookeeperServers:     []string{"localhost:2181"},
+	}
 }
 
 // HeartbeatInterval returns the heartbeat interval as a time.Duration.
-// The leader sends heartbeats at this interval to prevent elections.
-//
-// TODO: Convert HeartbeatMs to time.Duration.
 func (c Config) HeartbeatInterval() time.Duration {
-	return 0
+	return time.Duration(c.HeartbeatMs) * time.Millisecond
 }
 
 // HeartbeatTimeout returns the timeout after which a leader is considered failed.
 // Set to 2x the heartbeat interval to tolerate one missed heartbeat.
-//
-// TODO: Return 2 * HeartbeatInterval().
 func (c Config) HeartbeatTimeout() time.Duration {
-	return 0
+	return 2 * c.HeartbeatInterval()
 }
 
 // ElectionMinTimeout returns the minimum election timeout as a Duration.
-//
-// TODO: Convert ElectionMinMs to time.Duration.
 func (c Config) ElectionMinTimeout() time.Duration {
-	return 0
+	return time.Duration(c.ElectionMinMs) * time.Millisecond
 }
 
 // ElectionMaxTimeout returns the maximum election timeout as a Duration.
-//
-// TODO: Convert ElectionMaxMs to time.Duration.
 func (c Config) ElectionMaxTimeout() time.Duration {
-	return 0
+	return time.Duration(c.ElectionMaxMs) * time.Millisecond
 }
 
 // ReplicationTimeout returns the replication timeout as a Duration.
-// If quorum is not reached within this timeout, the publish fails.
-//
-// TODO: Convert ReplicationTimeoutMs to time.Duration.
 func (c Config) ReplicationTimeout() time.Duration {
-	return 0
+	return time.Duration(c.ReplicationTimeoutMs) * time.Millisecond
 }

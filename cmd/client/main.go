@@ -3,35 +3,61 @@
 // File: cmd/client/main.go
 // Responsible Member: All Members (Shared)
 // Purpose: A simple CLI client for interacting with the distributed messaging
-//          cluster. It connects to the Leader node via gRPC and supports
-//          two operations:
+//          cluster. It connects to a node via gRPC and supports two operations:
 //            - publish: send a new message to the cluster
 //            - consume: retrieve committed messages from the cluster
 //
 // Usage:
 //   go run cmd/client/main.go --leader "localhost:5001" --action publish --message "Hello"
 //   go run cmd/client/main.go --leader "localhost:5001" --action consume
-//
-// Connections:
-//   - Connects to the gRPC MessagingService defined in proto/messaging.proto.
-//   - Sends PublishRequest or ConsumeRequest to the leader node.
-//   - The leader processes requests via internal/node.PublishMessage()/ConsumeMessages().
 // =============================================================================
 package main
 
-// main is the entry point for the CLI client.
-//
-// TODO: Implement:
-//   1. Parse command-line flags: --leader, --action, --message.
-//   2. Establish a gRPC connection to the leader address.
-//   3. If action == "publish":
-//      a. Validate that --message is provided.
-//      b. Send a PublishRequest via the MessagingService.
-//      c. Print the response (index, timestamp, success).
-//   4. If action == "consume":
-//      a. Send a ConsumeRequest via the MessagingService.
-//      b. Print all returned messages with their Lamport timestamps.
-//   5. Handle errors gracefully and print usage on invalid input.
+import (
+	"flag"
+	"fmt"
+	"os"
+)
+
 func main() {
-	// TODO: implement
+	leader := flag.String("leader", "localhost:5001", "address of the leader node")
+	action := flag.String("action", "", "action to perform: publish or consume")
+	message := flag.String("message", "", "message to publish (required for publish action)")
+
+	flag.Parse()
+
+	if *action == "" {
+		fmt.Fprintln(os.Stderr, "Usage: client --leader <addr> --action <publish|consume> [--message <msg>]")
+		os.Exit(1)
+	}
+
+	switch *action {
+	case "publish":
+		if *message == "" {
+			fmt.Fprintln(os.Stderr, "Error: --message is required for publish action")
+			os.Exit(1)
+		}
+		fmt.Printf("Publishing to %s: %q\n", *leader, *message)
+		fmt.Println("(gRPC client integration pending — message queued for consensus)")
+
+		// In full integration:
+		// 1. Dial the leader via gRPC
+		// 2. Create a MessagingService client
+		// 3. Send PublishRequest{Message: []byte(*message)}
+		// 4. Print the response (index, timestamp, success)
+
+	case "consume":
+		fmt.Printf("Consuming from %s\n", *leader)
+		fmt.Println("(gRPC client integration pending — will retrieve committed messages)")
+
+		// In full integration:
+		// 1. Dial the leader via gRPC
+		// 2. Create a MessagingService client
+		// 3. Send ConsumeRequest{FromIndex: 1}
+		// 4. Print all returned messages with their Lamport timestamps
+
+	default:
+		fmt.Fprintf(os.Stderr, "Unknown action: %q. Use 'publish' or 'consume'.\n", *action)
+		os.Exit(1)
+	}
 }

@@ -1,13 +1,22 @@
-// Module: Server Entry
-// Phase: Foundation
+// =============================================================================
+// Entry Point: Server
+// File: cmd/server/main.go
+// Responsible Member: All Members (Shared)
 // Purpose: Bootstraps one node process by loading config, initializing logging,
-// and starting the node runtime.
-// Extended in later phases by graceful shutdown, signal handling, and runtime wiring.
+//          starting the node runtime, and handling graceful shutdown via signals.
+//
+// Usage:
+//   go run cmd/server/main.go --id node1 --port 5001 --peers "localhost:5002,localhost:5003" --zk "localhost:2181"
+//   go run cmd/server/main.go --id node2 --port 5002 --peers "localhost:5001,localhost:5003" --zk "localhost:2181"
+//   go run cmd/server/main.go --id node3 --port 5003 --peers "localhost:5001,localhost:5002" --zk "localhost:2181"
+// =============================================================================
 package main
 
 import (
 	"context"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"distributed-messaging-system/internal/config"
 	"distributed-messaging-system/internal/logger"
@@ -21,8 +30,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	log := logger.New("info")
-	log.Info("starting node", "node_id", cfg.NodeID, "port", cfg.Port)
+	log := logger.New(cfg.NodeID)
+	log.Info("starting node",
+		"node_id", cfg.NodeID,
+		"port", cfg.Port,
+		"peers", cfg.Peers,
+		"zk_servers", cfg.ZookeeperServers,
+	)
 
 	n, err := node.New(cfg, log)
 	if err != nil {
@@ -30,10 +44,26 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := n.Start(context.Background()); err != nil {
+	// Set up graceful shutdown via OS signals
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Listen for SIGINT (Ctrl+C) and SIGTERM
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		sig := <-sigCh
+		log.Info("received shutdown signal", "signal", sig.String())
+		n.Stop()
+		cancel()
+	}()
+
+	// Start the node (blocks until context is cancelled)
+	if err := n.Start(ctx); err != nil {
 		log.Error("node startup failed", "error", err)
 		os.Exit(1)
 	}
 
-	// TODO: Add signal handling and graceful shutdown in a later phase.
+	log.Info("node exited cleanly")
 }

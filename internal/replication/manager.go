@@ -69,17 +69,17 @@ func NewManager(log ReplicatedLog, clusterSize int) *Manager {
 func (m *Manager) ReplicateEntry(entry consensus.LogEntry) error {
 
 	// 1. Append locally
-	index, err := m.log.Append(entry)
-	if err != nil {
+	if err := m.log.Append(entry); err != nil {
 		return err
 	}
 
 	// Leader counts as an ACK immediately
-	m.quorum.RecordAck(index, "leader")
+	m.quorum.RecordAck(entry.Index, "leader")
 
 	// 2. For each follower, send AppendEntries (mocked as success)
 	for _, peer := range m.peers {
 		p := peer // capture for goroutine
+		idx := entry.Index
 		go func() {
 			// ---- MOCK: Simulate RPC success ----
 			time.Sleep(10 * time.Millisecond) // pretend network delay
@@ -87,7 +87,7 @@ func (m *Manager) ReplicateEntry(entry consensus.LogEntry) error {
 			// ------------------------------------
 
 			// 3. Record acknowledgment
-			m.quorum.RecordAck(index, p)
+			m.quorum.RecordAck(idx, p)
 		}()
 	}
 

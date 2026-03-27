@@ -1,7 +1,7 @@
 // Module: Transport
 // Phase: Foundation
 // Purpose: Declares shared RPC contracts used by node-to-node communication.
-// Extended in later phases with full protobuf-generated handlers and implementations.
+// These types bridge the transport layer with consensus and replication modules.
 package transport
 
 import "context"
@@ -27,22 +27,22 @@ type HeartbeatResponse struct {
 	Ok bool
 }
 
-// RequestVoteRequest is a placeholder for future election flow.
+// RequestVoteRequest wraps a vote request for transport.
 type RequestVoteRequest struct {
 	CandidateID string
 }
 
-// RequestVoteResponse is a placeholder vote result.
+// RequestVoteResponse wraps a vote result for transport.
 type RequestVoteResponse struct {
 	VoteGranted bool
 }
 
-// Service defines foundational RPC handlers without implementation.
+// Service defines foundational RPC handlers for node-to-node communication.
 type Service interface {
 	// SendMessage delivers a node message to another node.
 	SendMessage(context.Context, *SendMessageRequest) (*SendMessageResponse, error)
 	// Heartbeat reports that a node is alive.
 	Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error)
-	// RequestVote is reserved for future consensus work.
+	// RequestVote is used for consensus leader election.
 	RequestVote(context.Context, *RequestVoteRequest) (*RequestVoteResponse, error)
 }
