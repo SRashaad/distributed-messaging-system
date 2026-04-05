@@ -199,11 +199,9 @@ func (n *Node) PublishMessage(data []byte) (uint64, uint64, error) {
 
 	n.log.Debug("publishing message", "timestamp", ts)
 
-	// Forward to the consensus leader for index and term
-	index, term, err := n.consensus.ProposeEntry(data)
-	if err != nil {
-		return 0, 0, err
-	}
+	// Create the LogEntry natively pulling exact Term and absolute Log Index mappings
+	term := n.consensus.CurrentTerm()
+	index := n.repLog.LastIndex() + 1
 
 	// 3. Trigger network replication
 	entry := consensus.LogEntry{

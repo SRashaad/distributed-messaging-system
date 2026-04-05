@@ -79,22 +79,59 @@ func main() {
 
 			if err != nil {
 				errMsg := err.Error()
-				// Check if we need to redirect
-				if len(errMsg) > 20 && errMsg[len(errMsg)-5:] == "node1" {
-					currentLeader = "localhost:5001"
+
+				// 1. Hard Crash Redirect (TCP Connection Refused)
+				if len(errMsg) > 0 && (errMsg[len(errMsg)-11:] == "refused it." || errMsg[27:38] == "Unavailable" || currentLeader != "undefined") {
+					// We'll use a safer robust check for strings
+					importNeeded := false
+					for _, b := range errMsg {
+						if b == 'U' { importNeeded = true }
+					}
+					_ = importNeeded
+				}
+				
+				// Using simple string matching logic without importing strings
+				isUnreachable := false
+				if len(errMsg) > 10 {
+					for x := 0; x < len(errMsg)-10; x++ {
+						if errMsg[x:x+11] == "Unavailable" || errMsg[x:x+7] == "refused" {
+							isUnreachable = true
+							break
+						}
+					}
+				}
+
+				if isUnreachable {
+					fmt.Printf("Node %s is unreachable. Actively failing over...\n", currentLeader)
 					conn.Close()
-					fmt.Printf("Redirecting to leader: %s\n", currentLeader)
+					if currentLeader == "localhost:5001" {
+						currentLeader = "localhost:5002"
+					} else if currentLeader == "localhost:5002" {
+						currentLeader = "localhost:5003"
+					} else {
+						currentLeader = "localhost:5001"
+					}
 					continue
-				} else if len(errMsg) > 20 && errMsg[len(errMsg)-5:] == "node2" {
-					currentLeader = "localhost:5002"
-					conn.Close()
-					fmt.Printf("Redirecting to leader: %s\n", currentLeader)
-					continue
-				} else if len(errMsg) > 20 && errMsg[len(errMsg)-5:] == "node3" {
-					currentLeader = "localhost:5003"
-					conn.Close()
-					fmt.Printf("Redirecting to leader: %s\n", currentLeader)
-					continue
+				}
+
+				// 2. Soft Redirect (Follower Proxying)
+				if len(errMsg) > 5 {
+					if errMsg[len(errMsg)-5:] == "node1" {
+						currentLeader = "localhost:5001"
+						conn.Close()
+						fmt.Printf("Redirecting to true leader: %s\n", currentLeader)
+						continue
+					} else if errMsg[len(errMsg)-5:] == "node2" {
+						currentLeader = "localhost:5002"
+						conn.Close()
+						fmt.Printf("Redirecting to true leader: %s\n", currentLeader)
+						continue
+					} else if errMsg[len(errMsg)-5:] == "node3" {
+						currentLeader = "localhost:5003"
+						conn.Close()
+						fmt.Printf("Redirecting to true leader: %s\n", currentLeader)
+						continue
+					}
 				}
 				
 				conn.Close()
