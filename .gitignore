@@ -29,6 +29,10 @@ Thumbs.db
 # Build output
 /dist/
 
+# Protobuf tools
+/protoc_bin/
+protoc.zip
+
 # Environment
 .env
 .env.local
