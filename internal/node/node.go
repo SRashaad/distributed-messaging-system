@@ -27,6 +27,7 @@ import (
 	"distributed-messaging-system/internal/storage"
 	"distributed-messaging-system/internal/timesync"
 	"distributed-messaging-system/internal/transport"
+	"distributed-messaging-system/internal/transport/proto"
 )
 
 // Node represents the full runtime container for one server instance.
@@ -236,6 +237,29 @@ func (n *Node) GetConsensus() *consensus.RaftNode {
 // GetStore returns the message store for read operations.
 func (n *Node) GetStore() *storage.MessageStore {
 	return n.store
+}
+
+// GetStatus exposes live node identity, the gRPC dial address clients should use, and consensus/log metrics.
+func (n *Node) GetStatus(_ context.Context) (*proto.StatusResponse, error) {
+	var role proto.NodeRole
+	switch n.consensus.State() {
+	case consensus.Candidate:
+		role = proto.NodeRole_NODE_ROLE_CANDIDATE
+	case consensus.Leader:
+		role = proto.NodeRole_NODE_ROLE_LEADER
+	default:
+		role = proto.NodeRole_NODE_ROLE_FOLLOWER
+	}
+	listen := fmt.Sprintf("localhost:%d", n.cfg.Port)
+	return &proto.StatusResponse{
+		NodeId:              n.cfg.NodeID,
+		GrpcListenAddress:   listen,
+		Role:                role,
+		CurrentTerm:         n.consensus.CurrentTerm(),
+		LogLength:           n.repLog.LastIndex(),
+		LeaderId:            n.consensus.LeaderID(),
+		CommitIndex:         n.repLog.CommitIndex(),
+	}, nil
 }
 
 // PrintStatus logs the current state of the node and its consensus status.

@@ -13,6 +13,7 @@ import (
 type MessagingAPI interface {
 	PublishMessage(data []byte) (uint64, uint64, error)
 	GetStore() *storage.MessageStore
+	GetStatus(ctx context.Context) (*proto.StatusResponse, error)
 }
 
 // MessagingHandler implements proto.MessagingServiceServer
@@ -77,4 +78,9 @@ func (h *MessagingHandler) Consume(ctx context.Context, req *proto.ConsumeReques
 	return &proto.ConsumeResponse{
 		Messages: responses,
 	}, nil
+}
+
+// GetStatus returns identity, advertised gRPC address, role, and log metrics from the node.
+func (h *MessagingHandler) GetStatus(ctx context.Context, _ *proto.StatusRequest) (*proto.StatusResponse, error) {
+	return h.nodeAPI.GetStatus(ctx)
 }

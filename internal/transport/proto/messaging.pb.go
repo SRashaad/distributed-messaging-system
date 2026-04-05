@@ -26,7 +26,7 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v4.25.3
-// source: internal/transport/proto/messaging.proto
+// source: messaging.proto
 
 package proto
 
@@ -45,6 +45,57 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// NodeRole mirrors the in-process consensus role (Follower/Candidate/Leader).
+// Candidate corresponds to an election / coordination in progress; UIs may label it "Electing…".
+type NodeRole int32
+
+const (
+	NodeRole_NODE_ROLE_FOLLOWER  NodeRole = 0
+	NodeRole_NODE_ROLE_CANDIDATE NodeRole = 1
+	NodeRole_NODE_ROLE_LEADER    NodeRole = 2
+)
+
+// Enum value maps for NodeRole.
+var (
+	NodeRole_name = map[int32]string{
+		0: "NODE_ROLE_FOLLOWER",
+		1: "NODE_ROLE_CANDIDATE",
+		2: "NODE_ROLE_LEADER",
+	}
+	NodeRole_value = map[string]int32{
+		"NODE_ROLE_FOLLOWER":  0,
+		"NODE_ROLE_CANDIDATE": 1,
+		"NODE_ROLE_LEADER":    2,
+	}
+)
+
+func (x NodeRole) Enum() *NodeRole {
+	p := new(NodeRole)
+	*p = x
+	return p
+}
+
+func (x NodeRole) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (NodeRole) Descriptor() protoreflect.EnumDescriptor {
+	return file_messaging_proto_enumTypes[0].Descriptor()
+}
+
+func (NodeRole) Type() protoreflect.EnumType {
+	return &file_messaging_proto_enumTypes[0]
+}
+
+func (x NodeRole) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use NodeRole.Descriptor instead.
+func (NodeRole) EnumDescriptor() ([]byte, []int) {
+	return file_messaging_proto_rawDescGZIP(), []int{0}
+}
+
 // RequestVoteRequest is sent by a Candidate node during leader election.
 type RequestVoteRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -58,7 +109,7 @@ type RequestVoteRequest struct {
 
 func (x *RequestVoteRequest) Reset() {
 	*x = RequestVoteRequest{}
-	mi := &file_internal_transport_proto_messaging_proto_msgTypes[0]
+	mi := &file_messaging_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -70,7 +121,7 @@ func (x *RequestVoteRequest) String() string {
 func (*RequestVoteRequest) ProtoMessage() {}
 
 func (x *RequestVoteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_transport_proto_messaging_proto_msgTypes[0]
+	mi := &file_messaging_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -83,7 +134,7 @@ func (x *RequestVoteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestVoteRequest.ProtoReflect.Descriptor instead.
 func (*RequestVoteRequest) Descriptor() ([]byte, []int) {
-	return file_internal_transport_proto_messaging_proto_rawDescGZIP(), []int{0}
+	return file_messaging_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *RequestVoteRequest) GetTerm() uint64 {
@@ -125,7 +176,7 @@ type RequestVoteResponse struct {
 
 func (x *RequestVoteResponse) Reset() {
 	*x = RequestVoteResponse{}
-	mi := &file_internal_transport_proto_messaging_proto_msgTypes[1]
+	mi := &file_messaging_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -137,7 +188,7 @@ func (x *RequestVoteResponse) String() string {
 func (*RequestVoteResponse) ProtoMessage() {}
 
 func (x *RequestVoteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_transport_proto_messaging_proto_msgTypes[1]
+	mi := &file_messaging_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -150,7 +201,7 @@ func (x *RequestVoteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestVoteResponse.ProtoReflect.Descriptor instead.
 func (*RequestVoteResponse) Descriptor() ([]byte, []int) {
-	return file_internal_transport_proto_messaging_proto_rawDescGZIP(), []int{1}
+	return file_messaging_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *RequestVoteResponse) GetTerm() uint64 {
@@ -182,7 +233,7 @@ type AppendEntriesRequest struct {
 
 func (x *AppendEntriesRequest) Reset() {
 	*x = AppendEntriesRequest{}
-	mi := &file_internal_transport_proto_messaging_proto_msgTypes[2]
+	mi := &file_messaging_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -194,7 +245,7 @@ func (x *AppendEntriesRequest) String() string {
 func (*AppendEntriesRequest) ProtoMessage() {}
 
 func (x *AppendEntriesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_transport_proto_messaging_proto_msgTypes[2]
+	mi := &file_messaging_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -207,7 +258,7 @@ func (x *AppendEntriesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppendEntriesRequest.ProtoReflect.Descriptor instead.
 func (*AppendEntriesRequest) Descriptor() ([]byte, []int) {
-	return file_internal_transport_proto_messaging_proto_rawDescGZIP(), []int{2}
+	return file_messaging_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *AppendEntriesRequest) GetTerm() uint64 {
@@ -263,7 +314,7 @@ type AppendEntriesResponse struct {
 
 func (x *AppendEntriesResponse) Reset() {
 	*x = AppendEntriesResponse{}
-	mi := &file_internal_transport_proto_messaging_proto_msgTypes[3]
+	mi := &file_messaging_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -275,7 +326,7 @@ func (x *AppendEntriesResponse) String() string {
 func (*AppendEntriesResponse) ProtoMessage() {}
 
 func (x *AppendEntriesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_transport_proto_messaging_proto_msgTypes[3]
+	mi := &file_messaging_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -288,7 +339,7 @@ func (x *AppendEntriesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppendEntriesResponse.ProtoReflect.Descriptor instead.
 func (*AppendEntriesResponse) Descriptor() ([]byte, []int) {
-	return file_internal_transport_proto_messaging_proto_rawDescGZIP(), []int{3}
+	return file_messaging_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *AppendEntriesResponse) GetTerm() uint64 {
@@ -318,7 +369,7 @@ type LogEntry struct {
 
 func (x *LogEntry) Reset() {
 	*x = LogEntry{}
-	mi := &file_internal_transport_proto_messaging_proto_msgTypes[4]
+	mi := &file_messaging_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -330,7 +381,7 @@ func (x *LogEntry) String() string {
 func (*LogEntry) ProtoMessage() {}
 
 func (x *LogEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_transport_proto_messaging_proto_msgTypes[4]
+	mi := &file_messaging_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -343,7 +394,7 @@ func (x *LogEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogEntry.ProtoReflect.Descriptor instead.
 func (*LogEntry) Descriptor() ([]byte, []int) {
-	return file_internal_transport_proto_messaging_proto_rawDescGZIP(), []int{4}
+	return file_messaging_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *LogEntry) GetIndex() uint64 {
@@ -384,7 +435,7 @@ type PublishRequest struct {
 
 func (x *PublishRequest) Reset() {
 	*x = PublishRequest{}
-	mi := &file_internal_transport_proto_messaging_proto_msgTypes[5]
+	mi := &file_messaging_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -396,7 +447,7 @@ func (x *PublishRequest) String() string {
 func (*PublishRequest) ProtoMessage() {}
 
 func (x *PublishRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_transport_proto_messaging_proto_msgTypes[5]
+	mi := &file_messaging_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -409,7 +460,7 @@ func (x *PublishRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PublishRequest.ProtoReflect.Descriptor instead.
 func (*PublishRequest) Descriptor() ([]byte, []int) {
-	return file_internal_transport_proto_messaging_proto_rawDescGZIP(), []int{5}
+	return file_messaging_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *PublishRequest) GetMessage() []byte {
@@ -431,7 +482,7 @@ type PublishResponse struct {
 
 func (x *PublishResponse) Reset() {
 	*x = PublishResponse{}
-	mi := &file_internal_transport_proto_messaging_proto_msgTypes[6]
+	mi := &file_messaging_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -443,7 +494,7 @@ func (x *PublishResponse) String() string {
 func (*PublishResponse) ProtoMessage() {}
 
 func (x *PublishResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_transport_proto_messaging_proto_msgTypes[6]
+	mi := &file_messaging_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -456,7 +507,7 @@ func (x *PublishResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PublishResponse.ProtoReflect.Descriptor instead.
 func (*PublishResponse) Descriptor() ([]byte, []int) {
-	return file_internal_transport_proto_messaging_proto_rawDescGZIP(), []int{6}
+	return file_messaging_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *PublishResponse) GetSuccess() bool {
@@ -490,7 +541,7 @@ type ConsumeRequest struct {
 
 func (x *ConsumeRequest) Reset() {
 	*x = ConsumeRequest{}
-	mi := &file_internal_transport_proto_messaging_proto_msgTypes[7]
+	mi := &file_messaging_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -502,7 +553,7 @@ func (x *ConsumeRequest) String() string {
 func (*ConsumeRequest) ProtoMessage() {}
 
 func (x *ConsumeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_transport_proto_messaging_proto_msgTypes[7]
+	mi := &file_messaging_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -515,7 +566,7 @@ func (x *ConsumeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConsumeRequest.ProtoReflect.Descriptor instead.
 func (*ConsumeRequest) Descriptor() ([]byte, []int) {
-	return file_internal_transport_proto_messaging_proto_rawDescGZIP(), []int{7}
+	return file_messaging_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ConsumeRequest) GetFromIndex() uint64 {
@@ -535,7 +586,7 @@ type ConsumeResponse struct {
 
 func (x *ConsumeResponse) Reset() {
 	*x = ConsumeResponse{}
-	mi := &file_internal_transport_proto_messaging_proto_msgTypes[8]
+	mi := &file_messaging_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -547,7 +598,7 @@ func (x *ConsumeResponse) String() string {
 func (*ConsumeResponse) ProtoMessage() {}
 
 func (x *ConsumeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_transport_proto_messaging_proto_msgTypes[8]
+	mi := &file_messaging_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -560,7 +611,7 @@ func (x *ConsumeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConsumeResponse.ProtoReflect.Descriptor instead.
 func (*ConsumeResponse) Descriptor() ([]byte, []int) {
-	return file_internal_transport_proto_messaging_proto_rawDescGZIP(), []int{8}
+	return file_messaging_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ConsumeResponse) GetMessages() []*LogEntry {
@@ -570,11 +621,139 @@ func (x *ConsumeResponse) GetMessages() []*LogEntry {
 	return nil
 }
 
-var File_internal_transport_proto_messaging_proto protoreflect.FileDescriptor
+type StatusRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
 
-const file_internal_transport_proto_messaging_proto_rawDesc = "" +
+func (x *StatusRequest) Reset() {
+	*x = StatusRequest{}
+	mi := &file_messaging_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StatusRequest) ProtoMessage() {}
+
+func (x *StatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_messaging_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StatusRequest.ProtoReflect.Descriptor instead.
+func (*StatusRequest) Descriptor() ([]byte, []int) {
+	return file_messaging_proto_rawDescGZIP(), []int{9}
+}
+
+type StatusResponse struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	NodeId            string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`                                    // stable cluster identity (e.g. node1)
+	GrpcListenAddress string                 `protobuf:"bytes,2,opt,name=grpc_listen_address,json=grpcListenAddress,proto3" json:"grpc_listen_address,omitempty"` // client dial target (e.g. localhost:5001)
+	Role              NodeRole               `protobuf:"varint,3,opt,name=role,proto3,enum=messaging.NodeRole" json:"role,omitempty"`                             // Follower, Candidate, or Leader
+	CurrentTerm       uint64                 `protobuf:"varint,4,opt,name=current_term,json=currentTerm,proto3" json:"current_term,omitempty"`
+	LogLength         uint64                 `protobuf:"varint,5,opt,name=log_length,json=logLength,proto3" json:"log_length,omitempty"` // last log index (0 if empty)
+	LeaderId          string                 `protobuf:"bytes,6,opt,name=leader_id,json=leaderId,proto3" json:"leader_id,omitempty"`     // known leader node_id, if any
+	CommitIndex       uint64                 `protobuf:"varint,7,opt,name=commit_index,json=commitIndex,proto3" json:"commit_index,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *StatusResponse) Reset() {
+	*x = StatusResponse{}
+	mi := &file_messaging_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StatusResponse) ProtoMessage() {}
+
+func (x *StatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_messaging_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StatusResponse.ProtoReflect.Descriptor instead.
+func (*StatusResponse) Descriptor() ([]byte, []int) {
+	return file_messaging_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *StatusResponse) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+func (x *StatusResponse) GetGrpcListenAddress() string {
+	if x != nil {
+		return x.GrpcListenAddress
+	}
+	return ""
+}
+
+func (x *StatusResponse) GetRole() NodeRole {
+	if x != nil {
+		return x.Role
+	}
+	return NodeRole_NODE_ROLE_FOLLOWER
+}
+
+func (x *StatusResponse) GetCurrentTerm() uint64 {
+	if x != nil {
+		return x.CurrentTerm
+	}
+	return 0
+}
+
+func (x *StatusResponse) GetLogLength() uint64 {
+	if x != nil {
+		return x.LogLength
+	}
+	return 0
+}
+
+func (x *StatusResponse) GetLeaderId() string {
+	if x != nil {
+		return x.LeaderId
+	}
+	return ""
+}
+
+func (x *StatusResponse) GetCommitIndex() uint64 {
+	if x != nil {
+		return x.CommitIndex
+	}
+	return 0
+}
+
+var File_messaging_proto protoreflect.FileDescriptor
+
+const file_messaging_proto_rawDesc = "" +
 	"\n" +
-	"(internal/transport/proto/messaging.proto\x12\tmessaging\"\x95\x01\n" +
+	"\x0fmessaging.proto\x12\tmessaging\"\x95\x01\n" +
 	"\x12RequestVoteRequest\x12\x12\n" +
 	"\x04term\x18\x01 \x01(\x04R\x04term\x12!\n" +
 	"\fcandidate_id\x18\x02 \x01(\tR\vcandidateId\x12$\n" +
@@ -608,76 +787,99 @@ const file_internal_transport_proto_messaging_proto_rawDesc = "" +
 	"\n" +
 	"from_index\x18\x01 \x01(\x04R\tfromIndex\"B\n" +
 	"\x0fConsumeResponse\x12/\n" +
-	"\bmessages\x18\x01 \x03(\v2\x13.messaging.LogEntryR\bmessages2\xb4\x01\n" +
+	"\bmessages\x18\x01 \x03(\v2\x13.messaging.LogEntryR\bmessages\"\x0f\n" +
+	"\rStatusRequest\"\x84\x02\n" +
+	"\x0eStatusResponse\x12\x17\n" +
+	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12.\n" +
+	"\x13grpc_listen_address\x18\x02 \x01(\tR\x11grpcListenAddress\x12'\n" +
+	"\x04role\x18\x03 \x01(\x0e2\x13.messaging.NodeRoleR\x04role\x12!\n" +
+	"\fcurrent_term\x18\x04 \x01(\x04R\vcurrentTerm\x12\x1d\n" +
+	"\n" +
+	"log_length\x18\x05 \x01(\x04R\tlogLength\x12\x1b\n" +
+	"\tleader_id\x18\x06 \x01(\tR\bleaderId\x12!\n" +
+	"\fcommit_index\x18\a \x01(\x04R\vcommitIndex*Q\n" +
+	"\bNodeRole\x12\x16\n" +
+	"\x12NODE_ROLE_FOLLOWER\x10\x00\x12\x17\n" +
+	"\x13NODE_ROLE_CANDIDATE\x10\x01\x12\x14\n" +
+	"\x10NODE_ROLE_LEADER\x10\x022\xb4\x01\n" +
 	"\x10ConsensusService\x12L\n" +
 	"\vRequestVote\x12\x1d.messaging.RequestVoteRequest\x1a\x1e.messaging.RequestVoteResponse\x12R\n" +
-	"\rAppendEntries\x12\x1f.messaging.AppendEntriesRequest\x1a .messaging.AppendEntriesResponse2\x96\x01\n" +
+	"\rAppendEntries\x12\x1f.messaging.AppendEntriesRequest\x1a .messaging.AppendEntriesResponse2\xd8\x01\n" +
 	"\x10MessagingService\x12@\n" +
 	"\aPublish\x12\x19.messaging.PublishRequest\x1a\x1a.messaging.PublishResponse\x12@\n" +
-	"\aConsume\x12\x19.messaging.ConsumeRequest\x1a\x1a.messaging.ConsumeResponseB7Z5distributed-messaging-system/internal/transport/protob\x06proto3"
+	"\aConsume\x12\x19.messaging.ConsumeRequest\x1a\x1a.messaging.ConsumeResponse\x12@\n" +
+	"\tGetStatus\x12\x18.messaging.StatusRequest\x1a\x19.messaging.StatusResponseB7Z5distributed-messaging-system/internal/transport/protob\x06proto3"
 
 var (
-	file_internal_transport_proto_messaging_proto_rawDescOnce sync.Once
-	file_internal_transport_proto_messaging_proto_rawDescData []byte
+	file_messaging_proto_rawDescOnce sync.Once
+	file_messaging_proto_rawDescData []byte
 )
 
-func file_internal_transport_proto_messaging_proto_rawDescGZIP() []byte {
-	file_internal_transport_proto_messaging_proto_rawDescOnce.Do(func() {
-		file_internal_transport_proto_messaging_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_internal_transport_proto_messaging_proto_rawDesc), len(file_internal_transport_proto_messaging_proto_rawDesc)))
+func file_messaging_proto_rawDescGZIP() []byte {
+	file_messaging_proto_rawDescOnce.Do(func() {
+		file_messaging_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_messaging_proto_rawDesc), len(file_messaging_proto_rawDesc)))
 	})
-	return file_internal_transport_proto_messaging_proto_rawDescData
+	return file_messaging_proto_rawDescData
 }
 
-var file_internal_transport_proto_messaging_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
-var file_internal_transport_proto_messaging_proto_goTypes = []any{
-	(*RequestVoteRequest)(nil),    // 0: messaging.RequestVoteRequest
-	(*RequestVoteResponse)(nil),   // 1: messaging.RequestVoteResponse
-	(*AppendEntriesRequest)(nil),  // 2: messaging.AppendEntriesRequest
-	(*AppendEntriesResponse)(nil), // 3: messaging.AppendEntriesResponse
-	(*LogEntry)(nil),              // 4: messaging.LogEntry
-	(*PublishRequest)(nil),        // 5: messaging.PublishRequest
-	(*PublishResponse)(nil),       // 6: messaging.PublishResponse
-	(*ConsumeRequest)(nil),        // 7: messaging.ConsumeRequest
-	(*ConsumeResponse)(nil),       // 8: messaging.ConsumeResponse
+var file_messaging_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_messaging_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_messaging_proto_goTypes = []any{
+	(NodeRole)(0),                 // 0: messaging.NodeRole
+	(*RequestVoteRequest)(nil),    // 1: messaging.RequestVoteRequest
+	(*RequestVoteResponse)(nil),   // 2: messaging.RequestVoteResponse
+	(*AppendEntriesRequest)(nil),  // 3: messaging.AppendEntriesRequest
+	(*AppendEntriesResponse)(nil), // 4: messaging.AppendEntriesResponse
+	(*LogEntry)(nil),              // 5: messaging.LogEntry
+	(*PublishRequest)(nil),        // 6: messaging.PublishRequest
+	(*PublishResponse)(nil),       // 7: messaging.PublishResponse
+	(*ConsumeRequest)(nil),        // 8: messaging.ConsumeRequest
+	(*ConsumeResponse)(nil),       // 9: messaging.ConsumeResponse
+	(*StatusRequest)(nil),         // 10: messaging.StatusRequest
+	(*StatusResponse)(nil),        // 11: messaging.StatusResponse
 }
-var file_internal_transport_proto_messaging_proto_depIdxs = []int32{
-	4, // 0: messaging.AppendEntriesRequest.entries:type_name -> messaging.LogEntry
-	4, // 1: messaging.ConsumeResponse.messages:type_name -> messaging.LogEntry
-	0, // 2: messaging.ConsensusService.RequestVote:input_type -> messaging.RequestVoteRequest
-	2, // 3: messaging.ConsensusService.AppendEntries:input_type -> messaging.AppendEntriesRequest
-	5, // 4: messaging.MessagingService.Publish:input_type -> messaging.PublishRequest
-	7, // 5: messaging.MessagingService.Consume:input_type -> messaging.ConsumeRequest
-	1, // 6: messaging.ConsensusService.RequestVote:output_type -> messaging.RequestVoteResponse
-	3, // 7: messaging.ConsensusService.AppendEntries:output_type -> messaging.AppendEntriesResponse
-	6, // 8: messaging.MessagingService.Publish:output_type -> messaging.PublishResponse
-	8, // 9: messaging.MessagingService.Consume:output_type -> messaging.ConsumeResponse
-	6, // [6:10] is the sub-list for method output_type
-	2, // [2:6] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+var file_messaging_proto_depIdxs = []int32{
+	5,  // 0: messaging.AppendEntriesRequest.entries:type_name -> messaging.LogEntry
+	5,  // 1: messaging.ConsumeResponse.messages:type_name -> messaging.LogEntry
+	0,  // 2: messaging.StatusResponse.role:type_name -> messaging.NodeRole
+	1,  // 3: messaging.ConsensusService.RequestVote:input_type -> messaging.RequestVoteRequest
+	3,  // 4: messaging.ConsensusService.AppendEntries:input_type -> messaging.AppendEntriesRequest
+	6,  // 5: messaging.MessagingService.Publish:input_type -> messaging.PublishRequest
+	8,  // 6: messaging.MessagingService.Consume:input_type -> messaging.ConsumeRequest
+	10, // 7: messaging.MessagingService.GetStatus:input_type -> messaging.StatusRequest
+	2,  // 8: messaging.ConsensusService.RequestVote:output_type -> messaging.RequestVoteResponse
+	4,  // 9: messaging.ConsensusService.AppendEntries:output_type -> messaging.AppendEntriesResponse
+	7,  // 10: messaging.MessagingService.Publish:output_type -> messaging.PublishResponse
+	9,  // 11: messaging.MessagingService.Consume:output_type -> messaging.ConsumeResponse
+	11, // 12: messaging.MessagingService.GetStatus:output_type -> messaging.StatusResponse
+	8,  // [8:13] is the sub-list for method output_type
+	3,  // [3:8] is the sub-list for method input_type
+	3,  // [3:3] is the sub-list for extension type_name
+	3,  // [3:3] is the sub-list for extension extendee
+	0,  // [0:3] is the sub-list for field type_name
 }
 
-func init() { file_internal_transport_proto_messaging_proto_init() }
-func file_internal_transport_proto_messaging_proto_init() {
-	if File_internal_transport_proto_messaging_proto != nil {
+func init() { file_messaging_proto_init() }
+func file_messaging_proto_init() {
+	if File_messaging_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_internal_transport_proto_messaging_proto_rawDesc), len(file_internal_transport_proto_messaging_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   9,
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_messaging_proto_rawDesc), len(file_messaging_proto_rawDesc)),
+			NumEnums:      1,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   2,
 		},
-		GoTypes:           file_internal_transport_proto_messaging_proto_goTypes,
-		DependencyIndexes: file_internal_transport_proto_messaging_proto_depIdxs,
-		MessageInfos:      file_internal_transport_proto_messaging_proto_msgTypes,
+		GoTypes:           file_messaging_proto_goTypes,
+		DependencyIndexes: file_messaging_proto_depIdxs,
+		EnumInfos:         file_messaging_proto_enumTypes,
+		MessageInfos:      file_messaging_proto_msgTypes,
 	}.Build()
-	File_internal_transport_proto_messaging_proto = out.File
-	file_internal_transport_proto_messaging_proto_goTypes = nil
-	file_internal_transport_proto_messaging_proto_depIdxs = nil
+	File_messaging_proto = out.File
+	file_messaging_proto_goTypes = nil
+	file_messaging_proto_depIdxs = nil
 }

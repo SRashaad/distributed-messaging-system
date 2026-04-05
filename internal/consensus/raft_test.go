@@ -10,7 +10,6 @@
 package consensus
 
 import (
-	"bytes"
 	"testing"
 )
 

@@ -26,7 +26,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.6.1
 // - protoc             v4.25.3
-// source: internal/transport/proto/messaging.proto
+// source: messaging.proto
 
 package proto
 
@@ -195,12 +195,13 @@ var ConsensusService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "internal/transport/proto/messaging.proto",
+	Metadata: "messaging.proto",
 }
 
 const (
-	MessagingService_Publish_FullMethodName = "/messaging.MessagingService/Publish"
-	MessagingService_Consume_FullMethodName = "/messaging.MessagingService/Consume"
+	MessagingService_Publish_FullMethodName   = "/messaging.MessagingService/Publish"
+	MessagingService_Consume_FullMethodName   = "/messaging.MessagingService/Consume"
+	MessagingService_GetStatus_FullMethodName = "/messaging.MessagingService/GetStatus"
 )
 
 // MessagingServiceClient is the client API for MessagingService service.
@@ -216,6 +217,8 @@ type MessagingServiceClient interface {
 	Publish(ctx context.Context, in *PublishRequest, opts ...grpc.CallOption) (*PublishResponse, error)
 	// Consume retrieves committed messages starting from a given index.
 	Consume(ctx context.Context, in *ConsumeRequest, opts ...grpc.CallOption) (*ConsumeResponse, error)
+	// GetStatus returns live node identity, gRPC dial address, consensus role, and log metrics.
+	GetStatus(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 }
 
 type messagingServiceClient struct {
@@ -246,6 +249,16 @@ func (c *messagingServiceClient) Consume(ctx context.Context, in *ConsumeRequest
 	return out, nil
 }
 
+func (c *messagingServiceClient) GetStatus(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StatusResponse)
+	err := c.cc.Invoke(ctx, MessagingService_GetStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MessagingServiceServer is the server API for MessagingService service.
 // All implementations must embed UnimplementedMessagingServiceServer
 // for forward compatibility.
@@ -259,6 +272,8 @@ type MessagingServiceServer interface {
 	Publish(context.Context, *PublishRequest) (*PublishResponse, error)
 	// Consume retrieves committed messages starting from a given index.
 	Consume(context.Context, *ConsumeRequest) (*ConsumeResponse, error)
+	// GetStatus returns live node identity, gRPC dial address, consensus role, and log metrics.
+	GetStatus(context.Context, *StatusRequest) (*StatusResponse, error)
 	mustEmbedUnimplementedMessagingServiceServer()
 }
 
@@ -274,6 +289,9 @@ func (UnimplementedMessagingServiceServer) Publish(context.Context, *PublishRequ
 }
 func (UnimplementedMessagingServiceServer) Consume(context.Context, *ConsumeRequest) (*ConsumeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Consume not implemented")
+}
+func (UnimplementedMessagingServiceServer) GetStatus(context.Context, *StatusRequest) (*StatusResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetStatus not implemented")
 }
 func (UnimplementedMessagingServiceServer) mustEmbedUnimplementedMessagingServiceServer() {}
 func (UnimplementedMessagingServiceServer) testEmbeddedByValue()                          {}
@@ -332,6 +350,24 @@ func _MessagingService_Consume_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MessagingService_GetStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessagingServiceServer).GetStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MessagingService_GetStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessagingServiceServer).GetStatus(ctx, req.(*StatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MessagingService_ServiceDesc is the grpc.ServiceDesc for MessagingService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -347,7 +383,11 @@ var MessagingService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "Consume",
 			Handler:    _MessagingService_Consume_Handler,
 		},
+		{
+			MethodName: "GetStatus",
+			Handler:    _MessagingService_GetStatus_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "internal/transport/proto/messaging.proto",
+	Metadata: "messaging.proto",
 }

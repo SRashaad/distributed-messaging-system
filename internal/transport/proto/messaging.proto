@@ -51,6 +51,9 @@ service MessagingService {
 
   // Consume retrieves committed messages starting from a given index.
   rpc Consume(ConsumeRequest) returns (ConsumeResponse);
+
+  // GetStatus returns live node identity, gRPC dial address, consensus role, and log metrics.
+  rpc GetStatus(StatusRequest) returns (StatusResponse);
 }
 
 // ---------------------------------------------------------------------------
@@ -119,4 +122,24 @@ message ConsumeRequest {
 // ConsumeResponse returns a batch of committed messages.
 message ConsumeResponse {
   repeated LogEntry messages = 1; // the committed messages
+}
+
+// NodeRole mirrors the in-process consensus role (Follower/Candidate/Leader).
+// Candidate corresponds to an election / coordination in progress; UIs may label it "Electing…".
+enum NodeRole {
+  NODE_ROLE_FOLLOWER = 0;
+  NODE_ROLE_CANDIDATE = 1;
+  NODE_ROLE_LEADER = 2;
+}
+
+message StatusRequest {}
+
+message StatusResponse {
+  string node_id = 1;                  // stable cluster identity (e.g. node1)
+  string grpc_listen_address = 2;    // client dial target (e.g. localhost:5001)
+  NodeRole role = 3;                 // Follower, Candidate, or Leader
+  uint64 current_term = 4;
+  uint64 log_length = 5;             // last log index (0 if empty)
+  string leader_id = 6;              // known leader node_id, if any
+  uint64 commit_index = 7;
 }
