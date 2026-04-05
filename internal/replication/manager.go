@@ -22,9 +22,12 @@
 package replication
 
 import (
+	"log"
 	"time"
 
 	"distributed-messaging-system/internal/consensus"
+	"distributed-messaging-system/internal/transport"
+	"distributed-messaging-system/internal/transport/proto"
 )
 
 // ReplicationManager defines the interface for orchestrating log replication.
@@ -40,32 +43,24 @@ type ReplicationManager interface {
 type Manager struct {
 	log    ReplicatedLog  // the local replicated log
 	quorum *QuorumTracker // tracks follower acknowledgments
-
-	// TODO: Add a transport.PeerClient field for sending AppendEntries RPCs.
-	// TODO: Add a list of peer addresses to iterate over during replication.
-	peers []string // list of follower IDs or addresses (mock)
+	peers  []string       // list of follower addresses
+	client *transport.PeerClient
+	nodeID string         // the current node's ID
 }
 
 // NewManager creates a new ReplicationManager.
-//
-// TODO: Initialize with the given log and a QuorumTracker sized for clusterSize.
-//       Also accept a transport reference for sending RPCs.
-func NewManager(log ReplicatedLog, clusterSize int) *Manager {
+func NewManager(log ReplicatedLog, clusterSize int, peers []string, client *transport.PeerClient, nodeID string) *Manager {
 	return &Manager{
 		log:    log,
 		quorum: NewQuorumTracker(clusterSize),
-		peers:  []string{}, // placeholder until real transport available
+		peers:  peers,
+		client: client,
+		nodeID: nodeID,
 	}
 }
 
 // ReplicateEntry appends an entry to the local log and initiates
 // replication to all followers via AppendEntries RPCs.
-//
-// TODO: Implement:
-//   1. Append the entry to the local log.
-//   2. For each follower, send an AppendEntries RPC in a goroutine.
-//   3. When a follower responds with Success=true, call quorum.RecordAck().
-//   4. Return any errors from the local append.
 func (m *Manager) ReplicateEntry(entry consensus.LogEntry) error {
 
 	// 1. Append locally
@@ -74,20 +69,46 @@ func (m *Manager) ReplicateEntry(entry consensus.LogEntry) error {
 	}
 
 	// Leader counts as an ACK immediately
-	m.quorum.RecordAck(entry.Index, "leader")
+	m.quorum.RecordAck(entry.Index, m.nodeID)
 
-	// 2. For each follower, send AppendEntries (mocked as success)
+	// 2. For each follower, send AppendEntries
 	for _, peer := range m.peers {
 		p := peer // capture for goroutine
-		idx := entry.Index
+		
 		go func() {
-			// ---- MOCK: Simulate RPC success ----
-			time.Sleep(10 * time.Millisecond) // pretend network delay
+			req := &proto.AppendEntriesRequest{
+				Term:         entry.Term,
+				LeaderId:     m.nodeID,
+				PrevLogIndex: entry.Index - 1,
+				PrevLogTerm:  0, // Would query from log in prod, optional for basic replication
+				Entries: []*proto.LogEntry{
+					{
+						Index:     entry.Index,
+						Term:      entry.Term,
+						Timestamp: entry.Timestamp,
+						Data:      entry.Data,
+					},
+				},
+				LeaderCommit: m.log.CommitIndex(),
+			}
+
 			// In real implementation, call transport.AppendEntries(p, entry)
-			// ------------------------------------
+			respIf, err := m.client.SendAppendEntries(p, req)
+			if err != nil {
+				log.Printf("[replication] Failed to send AppendEntries to %s: %v", p, err)
+				return
+			}
+			
+			resp, ok := respIf.(*proto.AppendEntriesResponse)
+			if !ok {
+				log.Printf("[replication] Invalid response from %s", p)
+				return
+			}
 
 			// 3. Record acknowledgment
-			m.quorum.RecordAck(idx, p)
+			if resp.Success {
+				m.quorum.RecordAck(entry.Index, p)
+			}
 		}()
 	}
 

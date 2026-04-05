@@ -34,11 +34,10 @@ func (s *Server) GetGRPCServer() *grpc.Server {
 	return s.grpcServer
 }
 
-// RegisterConsensusHandler is a placeholder for registering the consensus
-// module's gRPC handlers. With ZooKeeper handling election, this primarily
-// handles AppendEntries for log replication.
-func (s *Server) RegisterConsensusHandler() {
-	log.Printf("[transport] Consensus handler registered (ZooKeeper handles election)")
+// RegisterConsensusHandler registers the consensus service handlers for RequestVote and AppendEntries RPCs.
+func (s *Server) RegisterConsensusHandler(api ConsensusAPI) {
+	proto.RegisterConsensusServiceServer(s.grpcServer, NewConsensusHandler(api))
+	log.Printf("[transport] Consensus handler registered")
 }
 
 // RegisterMessagingHandler registers the messaging service handlers for Publish and Consume RPCs.

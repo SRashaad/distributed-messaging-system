@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"distributed-messaging-system/internal/config"
 	"distributed-messaging-system/internal/consensus"
@@ -58,7 +59,7 @@ func New(cfg config.Config, log *logger.Logger) (*Node, error) {
 	if clusterSize < 1 {
 		clusterSize = 1
 	}
-	repManager := replication.NewManager(repLog, clusterSize)
+	repManager := replication.NewManager(repLog, clusterSize, cfg.Peers, peerClient, cfg.NodeID)
 	clock := &timesync.LamportClock{}
 	msgStore := storage.NewMessageStore()
 	detector := fault.NewDetector(cfg.HeartbeatTimeout())
@@ -94,6 +95,7 @@ func (n *Node) Start(ctx context.Context) error {
 	
 	// Register the protobuf handlers
 	n.transport.RegisterMessagingHandler(n)
+	n.transport.RegisterConsensusHandler(n)
 
 	if err := n.transport.Start(); err != nil {
 		return err
@@ -179,16 +181,47 @@ func (n *Node) PublishMessage(data []byte) (uint64, uint64, error) {
 		return 0, 0, fmt.Errorf("not the leader — redirect to %s", leaderID)
 	}
 
-	// Tick the Lamport clock
+	// 1. Deduplication mechanism
+	msgStr := string(data)
+	allMsgs := n.store.GetAll()
+	for id, msg := range allMsgs {
+		if msg.Data == msgStr {
+			n.log.Info("duplicate message detected, avoiding replication", "message", msgStr)
+			// Return successful response without appending again
+			var storedIndex uint64
+			fmt.Sscanf(id, "%d", &storedIndex)
+			return storedIndex, msg.Timestamp, nil
+		}
+	}
+
+	// 2. Tick the Lamport clock
 	ts := n.clock.Tick()
 
 	n.log.Debug("publishing message", "timestamp", ts)
 
-	// Forward to the consensus leader for replication
-	// In a full integration, ProposeEntry would take the timestamp
+	// Forward to the consensus leader for index and term
 	index, term, err := n.consensus.ProposeEntry(data)
 	if err != nil {
 		return 0, 0, err
+	}
+
+	// 3. Trigger network replication
+	entry := consensus.LogEntry{
+		Index:     index,
+		Term:      term,
+		Timestamp: ts,
+		Data:      data,
+	}
+	
+	if err := n.repManager.ReplicateEntry(entry); err != nil {
+		return 0, 0, fmt.Errorf("replication failed: %w", err)
+	}
+
+	// 4. Wait for quorum (Data Consistency)
+	n.log.Debug("waiting for quorum", "index", index)
+	success, err := n.repManager.WaitForQuorum(index, 2*time.Second)
+	if err != nil || !success {
+		return 0, 0, fmt.Errorf("failed to reach quorum for log index %d", index)
 	}
 
 	// Apply to local store after commit
@@ -211,4 +244,29 @@ func (n *Node) GetStore() *storage.MessageStore {
 func (n *Node) PrintStatus() {
 	status := n.consensus.FormatClusterStatus()
 	log.Printf("[node] %s", status)
+}
+
+// ---------------------------------------------------------------------------
+// Consensus API implementation
+// ---------------------------------------------------------------------------
+
+func (n *Node) HandleAppendEntries(req *consensus.AppendEntriesRequest) *consensus.AppendEntriesResponse {
+	return n.consensus.HandleAppendEntries(req)
+}
+
+func (n *Node) HandleRequestVote(req *consensus.RequestVoteRequest) *consensus.RequestVoteResponse {
+	return n.consensus.HandleRequestVote(req)
+}
+
+func (n *Node) OnAppendEntriesRecv(entries []consensus.LogEntry, leaderCommit uint64) {
+	for _, entry := range entries {
+		// Update Lamport clock if needed
+		n.clock.Update(entry.Timestamp)
+
+		// Append to local log
+		n.repLog.Append(entry)
+
+		// Apply to message store for consumption
+		replication.ApplyLogToStore(n.store, entry.Index, entry.Data, entry.Timestamp, entry.Term)
+	}
 }
