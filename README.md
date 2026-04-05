@@ -10,7 +10,7 @@ When you submit, include in **one zip file**:
 
 | Item | Notes |
 | :--- | :--- |
-| **Report** | PDF or document as required by your module |
+| **Report** | PDF or document as required by your module — draft: **[`docs/COURSE_REPORT.md`](docs/COURSE_REPORT.md)** (export to PDF if needed) |
 | **Source code** | This repository (excluding large local-only folders such as `bin/`, `.tools/`, `.cluster-logs/` if present) |
 | **Presentation** | Slides + any **text files** with **links** (e.g. video links), as required |
 | **This `README.md`** | At the **root** of the project next to `go.mod` |
@@ -132,6 +132,8 @@ More detail: **[`docs/running_the_cluster_guide.md`](docs/running_the_cluster_gu
 
 | Document | Purpose |
 | :--- | :--- |
+| [`pitch.md`](pitch.md) | Video / presentation script (by team member; aligned to this codebase) |
+| [`docs/COURSE_REPORT.md`](docs/COURSE_REPORT.md) | Main project report (Markdown; export to PDF for submission if required) |
 | [`docs/running_the_cluster_guide.md`](docs/running_the_cluster_guide.md) | Evaluator-oriented run guide (ZK, 3 nodes, kill leader, CLI) |
 | [`docs/PROJECT_README_EXTENDED.md`](docs/PROJECT_README_EXTENDED.md) | **Full** original README: architecture, modules, diagrams, branching, long “How to Run” |
 | [`docs/STARTER_GUIDE.md`](docs/STARTER_GUIDE.md) | Onboarding and tooling for contributors |
