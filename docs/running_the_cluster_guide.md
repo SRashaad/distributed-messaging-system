@@ -112,7 +112,9 @@ go run cmd/client/main.go --leader "localhost:5002" --action publish --message "
 # Consume the message back
 go run cmd/client/main.go --leader "localhost:5002" --action consume
 ```
-
+---
+go run ./cmd/dashboard -http localhost:8090 -nodes "localhost:5001,localhost:5002,localhost:5003"
+---
 *(Note: While the CLI correctly dials the leader, full message propagation awaits the completion of the gRPC MessagingService protobuf handlers by the transport team module.)*
 
 ---
