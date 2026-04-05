@@ -14,9 +14,17 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
+	"log"
 	"os"
+	"time"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
+	"distributed-messaging-system/internal/transport/proto"
 )
 
 func main() {
@@ -31,6 +39,18 @@ func main() {
 		os.Exit(1)
 	}
 
+	// 1. Dial the leader via gRPC
+	conn, err := grpc.Dial(*leader, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("Failed to connect to leader %s: %v", *leader, err)
+	}
+	defer conn.Close()
+
+	// 2. Create a MessagingService client
+	client := proto.NewMessagingServiceClient(conn)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	switch *action {
 	case "publish":
 		if *message == "" {
@@ -38,26 +58,42 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Printf("Publishing to %s: %q\n", *leader, *message)
-		fmt.Println("(gRPC client integration pending — message queued for consensus)")
 
-		// In full integration:
-		// 1. Dial the leader via gRPC
-		// 2. Create a MessagingService client
-		// 3. Send PublishRequest{Message: []byte(*message)}
-		// 4. Print the response (index, timestamp, success)
+		// 3. Send PublishRequest
+		res, err := client.Publish(ctx, &proto.PublishRequest{
+			Message: []byte(*message),
+		})
+		if err != nil {
+			log.Fatalf("Publish failed: %v", err)
+		}
+
+		// 4. Print the response
+		fmt.Printf("Success! Message committed at Index: %d, Lamport Timestamp: %d\n", res.Index, res.Timestamp)
 
 	case "consume":
 		fmt.Printf("Consuming from %s\n", *leader)
-		fmt.Println("(gRPC client integration pending — will retrieve committed messages)")
 
-		// In full integration:
-		// 1. Dial the leader via gRPC
-		// 2. Create a MessagingService client
-		// 3. Send ConsumeRequest{FromIndex: 1}
-		// 4. Print all returned messages with their Lamport timestamps
+		// 3. Send ConsumeRequest
+		res, err := client.Consume(ctx, &proto.ConsumeRequest{
+			FromIndex: 1,
+		})
+		if err != nil {
+			log.Fatalf("Consume failed: %v", err)
+		}
+
+		// 4. Print all returned messages
+		if len(res.Messages) == 0 {
+			fmt.Println("No messages found in the log.")
+		} else {
+			fmt.Println("Committed Messages:")
+			for _, msg := range res.Messages {
+				fmt.Printf("  - Index: %d | Term: %d | Time: %d | Data: %s\n", msg.Index, msg.Term, msg.Timestamp, string(msg.Data))
+			}
+		}
 
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown action: %q. Use 'publish' or 'consume'.\n", *action)
 		os.Exit(1)
 	}
 }
+

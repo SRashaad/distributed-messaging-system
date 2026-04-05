@@ -11,6 +11,7 @@ import (
 	"net"
 
 	"google.golang.org/grpc"
+	"distributed-messaging-system/internal/transport/proto"
 )
 
 // Server wraps a gRPC server with node-specific configuration.
@@ -40,9 +41,9 @@ func (s *Server) RegisterConsensusHandler() {
 	log.Printf("[transport] Consensus handler registered (ZooKeeper handles election)")
 }
 
-// RegisterMessagingHandler is a placeholder for registering the messaging
-// service handlers for Publish and Consume RPCs from clients.
-func (s *Server) RegisterMessagingHandler() {
+// RegisterMessagingHandler registers the messaging service handlers for Publish and Consume RPCs.
+func (s *Server) RegisterMessagingHandler(api MessagingAPI) {
+	proto.RegisterMessagingServiceServer(s.grpcServer, NewMessagingHandler(api))
 	log.Printf("[transport] Messaging handler registered")
 }
 

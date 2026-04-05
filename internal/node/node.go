@@ -90,6 +90,10 @@ func (n *Node) Start(ctx context.Context) error {
 
 	// 1. Start the gRPC transport server
 	n.log.Info("starting transport server", "port", n.cfg.Port)
+	
+	// Register the protobuf handlers
+	n.transport.RegisterMessagingHandler(n)
+
 	if err := n.transport.Start(); err != nil {
 		return err
 	}
@@ -156,22 +160,23 @@ func (n *Node) Stop() {
 }
 
 // PublishMessage handles a client publish request by forwarding to consensus.
-func (n *Node) PublishMessage(data []byte) (uint64, error) {
+func (n *Node) PublishMessage(data []byte) (uint64, uint64, error) {
 	// Tick the Lamport clock
 	ts := n.clock.Tick()
 
 	n.log.Debug("publishing message", "timestamp", ts)
 
 	// Forward to the consensus leader for replication
-	index, err := n.consensus.ProposeEntry(data)
+	// In a full integration, ProposeEntry would take the timestamp
+	index, term, err := n.consensus.ProposeEntry(data)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 
 	// Apply to local store after commit
-	replication.ApplyLogToStore(n.store, index, data)
+	replication.ApplyLogToStore(n.store, index, data, ts, term)
 
-	return index, nil
+	return index, ts, nil
 }
 
 // GetConsensus returns the consensus module for status queries.
