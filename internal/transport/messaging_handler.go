@@ -64,9 +64,14 @@ func (h *MessagingHandler) Consume(ctx context.Context, req *proto.ConsumeReques
 		}
 	}
 
-	// Sort results by index since map iteration is unordered
+	// Member 3: Time Synchronization
+	// Sort results by Lamport timestamp for true causal ordering (out-of-order resolution).
+	// If timestamps are identical, use the Raft log index as a deterministic tie-breaker.
 	sort.Slice(responses, func(i, j int) bool {
-		return responses[i].Index < responses[j].Index
+		if responses[i].Timestamp == responses[j].Timestamp {
+			return responses[i].Index < responses[j].Index
+		}
+		return responses[i].Timestamp < responses[j].Timestamp
 	})
 
 	return &proto.ConsumeResponse{
