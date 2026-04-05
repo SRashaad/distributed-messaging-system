@@ -20,6 +20,10 @@ package fault
 import (
 	"fmt"
 	"log"
+
+	"distributed-messaging-system/internal/replication"
+	"distributed-messaging-system/internal/transport"
+	"distributed-messaging-system/internal/transport/proto"
 )
 
 // RecoveryManager defines the interface for node recovery operations.
@@ -30,16 +34,17 @@ type RecoveryManager interface {
 
 // LogRecovery implements RecoveryManager.
 type LogRecovery struct {
-	// In full integration, these would be:
-	//   log       replication.ReplicatedLog
-	//   transport *transport.PeerClient
-	nodeID string // this node's ID for logging
+	log       replication.ReplicatedLog
+	transport *transport.PeerClient
+	nodeID    string // this node's ID for logging
 }
 
 // NewLogRecovery creates a new recovery manager.
-func NewLogRecovery(nodeID string) *LogRecovery {
+func NewLogRecovery(nodeID string, log replication.ReplicatedLog, tc *transport.PeerClient) *LogRecovery {
 	return &LogRecovery{
-		nodeID: nodeID,
+		log:       log,
+		transport: tc,
+		nodeID:    nodeID,
 	}
 }
 
@@ -48,13 +53,15 @@ func NewLogRecovery(nodeID string) *LogRecovery {
 func (r *LogRecovery) InitiateRecovery(nodeID string) error {
 	log.Printf("[fault] Initiating recovery for node %s", nodeID)
 
-	// In full integration:
-	// 1. Query the recovering node for its last log index (via RPC)
-	// 2. Determine which entries are missing
-	// 3. Call SyncLog() with the appropriate starting index
+	// Since we don't have the exact state without querying, 
+	// we will sync the entire log from index 1.
+	// In a complete implementation, we'd query the follower's last log index.
+	err := r.SyncLog(nodeID, 1)
+	if err != nil {
+		return fmt.Errorf("failed to sync log for node %s: %w", nodeID, err)
+	}
 
-	// For now, log the intent and return success
-	log.Printf("[fault] Recovery initiated for node %s (will sync missing entries)", nodeID)
+	log.Printf("[fault] Recovery initiated for node %s (syncing missing entries)", nodeID)
 	return nil
 }
 
@@ -62,13 +69,42 @@ func (r *LogRecovery) InitiateRecovery(nodeID string) error {
 func (r *LogRecovery) SyncLog(nodeID string, fromIndex uint64) error {
 	log.Printf("[fault] Syncing log to node %s from index %d", nodeID, fromIndex)
 
-	// In full integration:
-	// 1. Read entries from the leader's log starting at fromIndex
-	// 2. Send entries to the recovering node via AppendEntries RPC
-	// 3. Handle the response and retry if necessary
-
 	if fromIndex == 0 {
 		return fmt.Errorf("invalid fromIndex: must be >= 1")
+	}
+
+	entries, err := r.log.GetEntriesFrom(fromIndex)
+	if err != nil {
+		return fmt.Errorf("failed to get entries from index %d: %w", fromIndex, err)
+	}
+
+	if len(entries) == 0 {
+		log.Printf("[fault] No entries to sync to node %s", nodeID)
+		return nil
+	}
+
+	protoEntries := make([]*proto.LogEntry, 0, len(entries))
+	for _, e := range entries {
+		protoEntries = append(protoEntries, &proto.LogEntry{
+			Index:     e.Index,
+			Term:      e.Term,
+			Timestamp: e.Timestamp,
+			Data:      e.Data,
+		})
+	}
+
+	req := &proto.AppendEntriesRequest{
+		Term:         r.log.LastTerm(),
+		LeaderId:     r.nodeID,
+		PrevLogIndex: fromIndex - 1,
+		PrevLogTerm:  0, // Would query from log in prod, optional for basic recovery
+		Entries:      protoEntries,
+		LeaderCommit: r.log.CommitIndex(),
+	}
+
+	_, err = r.transport.SendAppendEntries(nodeID, req)
+	if err != nil {
+		return fmt.Errorf("failed to send AppendEntries to %s: %w", nodeID, err)
 	}
 
 	log.Printf("[fault] Log sync to node %s completed from index %d", nodeID, fromIndex)

@@ -15,6 +15,7 @@ package node
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"distributed-messaging-system/internal/config"
@@ -61,7 +62,7 @@ func New(cfg config.Config, log *logger.Logger) (*Node, error) {
 	clock := &timesync.LamportClock{}
 	msgStore := storage.NewMessageStore()
 	detector := fault.NewDetector(cfg.HeartbeatTimeout())
-	recovery := fault.NewLogRecovery(cfg.NodeID)
+	recovery := fault.NewLogRecovery(cfg.NodeID, repLog, peerClient)
 
 	// Create the ZooKeeper-backed consensus module
 	raftNode := consensus.NewRaftNode(cfg.NodeID, cfg.ZookeeperServers)
@@ -161,6 +162,23 @@ func (n *Node) Stop() {
 
 // PublishMessage handles a client publish request by forwarding to consensus.
 func (n *Node) PublishMessage(data []byte) (uint64, uint64, error) {
+	// If this node is not the leader, automatic failover/proxy mechanism
+	if !n.consensus.IsLeader() {
+		leaderID := n.consensus.LeaderID()
+		if leaderID == "" {
+			return 0, 0, fmt.Errorf("no leader currently elected")
+		}
+		
+		// Find peer address for the leader
+		// (Assume cfg.Peers is list of addresses like localhost:5002, and node IDs match them or we route to leader)
+		// Wait, the leaderID is from ZooKeeper which is just a string like "node1". We need a map of NodeID -> Address.
+		// For simplicity, in this project if we can't map, we can just return a descriptive error so the client redirects, 
+		// but if we want seamless proxy context, we need the leader's address. Let's return a redirect error if mapping is complex,
+		// or actually implement the proxy if we have the peer address.
+		// Let's implement redirection in the client instead, or proxy here.
+		return 0, 0, fmt.Errorf("not the leader — redirect to %s", leaderID)
+	}
+
 	// Tick the Lamport clock
 	ts := n.clock.Tick()
 

@@ -57,18 +57,61 @@ func main() {
 			fmt.Fprintln(os.Stderr, "Error: --message is required for publish action")
 			os.Exit(1)
 		}
-		fmt.Printf("Publishing to %s: %q\n", *leader, *message)
+		
+		var res *proto.PublishResponse
+		var err error
+		currentLeader := *leader
+		maxRetries := 3
 
-		// 3. Send PublishRequest
-		res, err := client.Publish(ctx, &proto.PublishRequest{
-			Message: []byte(*message),
-		})
+		for i := 0; i < maxRetries; i++ {
+			fmt.Printf("Publishing to %s: %q\n", currentLeader, *message)
+			
+			// Dial the current leader
+			conn, dErr := grpc.Dial(currentLeader, grpc.WithTransportCredentials(insecure.NewCredentials()))
+			if dErr != nil {
+				log.Fatalf("Failed to connect to leader %s: %v", currentLeader, dErr)
+			}
+			msgClient := proto.NewMessagingServiceClient(conn)
+
+			res, err = msgClient.Publish(ctx, &proto.PublishRequest{
+				Message: []byte(*message),
+			})
+
+			if err != nil {
+				errMsg := err.Error()
+				// Check if we need to redirect
+				if len(errMsg) > 20 && errMsg[len(errMsg)-5:] == "node1" {
+					currentLeader = "localhost:5001"
+					conn.Close()
+					fmt.Printf("Redirecting to leader: %s\n", currentLeader)
+					continue
+				} else if len(errMsg) > 20 && errMsg[len(errMsg)-5:] == "node2" {
+					currentLeader = "localhost:5002"
+					conn.Close()
+					fmt.Printf("Redirecting to leader: %s\n", currentLeader)
+					continue
+				} else if len(errMsg) > 20 && errMsg[len(errMsg)-5:] == "node3" {
+					currentLeader = "localhost:5003"
+					conn.Close()
+					fmt.Printf("Redirecting to leader: %s\n", currentLeader)
+					continue
+				}
+				
+				conn.Close()
+				log.Fatalf("Publish failed: %v", err)
+			}
+
+			conn.Close()
+			break // Success
+		}
+		
 		if err != nil {
-			log.Fatalf("Publish failed: %v", err)
+			log.Fatalf("Publish failed after retries: %v", err)
 		}
 
 		// 4. Print the response
 		fmt.Printf("Success! Message committed at Index: %d, Lamport Timestamp: %d\n", res.Index, res.Timestamp)
+
 
 	case "consume":
 		fmt.Printf("Consuming from %s\n", *leader)
