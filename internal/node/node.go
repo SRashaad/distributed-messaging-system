@@ -15,7 +15,9 @@ package node
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"time"
 
 	"distributed-messaging-system/internal/config"
 	"distributed-messaging-system/internal/consensus"
@@ -25,6 +27,7 @@ import (
 	"distributed-messaging-system/internal/storage"
 	"distributed-messaging-system/internal/timesync"
 	"distributed-messaging-system/internal/transport"
+	"distributed-messaging-system/internal/transport/proto"
 )
 
 // Node represents the full runtime container for one server instance.
@@ -57,11 +60,11 @@ func New(cfg config.Config, log *logger.Logger) (*Node, error) {
 	if clusterSize < 1 {
 		clusterSize = 1
 	}
-	repManager := replication.NewManager(repLog, clusterSize)
+	repManager := replication.NewManager(repLog, clusterSize, cfg.Peers, peerClient, cfg.NodeID)
 	clock := &timesync.LamportClock{}
 	msgStore := storage.NewMessageStore()
 	detector := fault.NewDetector(cfg.HeartbeatTimeout())
-	recovery := fault.NewLogRecovery(cfg.NodeID)
+	recovery := fault.NewLogRecovery(cfg.NodeID, repLog, peerClient)
 
 	// Create the ZooKeeper-backed consensus module
 	raftNode := consensus.NewRaftNode(cfg.NodeID, cfg.ZookeeperServers)
@@ -90,6 +93,11 @@ func (n *Node) Start(ctx context.Context) error {
 
 	// 1. Start the gRPC transport server
 	n.log.Info("starting transport server", "port", n.cfg.Port)
+	
+	// Register the protobuf handlers
+	n.transport.RegisterMessagingHandler(n)
+	n.transport.RegisterConsensusHandler(n)
+
 	if err := n.transport.Start(); err != nil {
 		return err
 	}
@@ -156,22 +164,69 @@ func (n *Node) Stop() {
 }
 
 // PublishMessage handles a client publish request by forwarding to consensus.
-func (n *Node) PublishMessage(data []byte) (uint64, error) {
-	// Tick the Lamport clock
+func (n *Node) PublishMessage(data []byte) (uint64, uint64, error) {
+	// If this node is not the leader, automatic failover/proxy mechanism
+	if !n.consensus.IsLeader() {
+		leaderID := n.consensus.LeaderID()
+		if leaderID == "" {
+			return 0, 0, fmt.Errorf("no leader currently elected")
+		}
+		
+		// Find peer address for the leader
+		// (Assume cfg.Peers is list of addresses like localhost:5002, and node IDs match them or we route to leader)
+		// Wait, the leaderID is from ZooKeeper which is just a string like "node1". We need a map of NodeID -> Address.
+		// For simplicity, in this project if we can't map, we can just return a descriptive error so the client redirects, 
+		// but if we want seamless proxy context, we need the leader's address. Let's return a redirect error if mapping is complex,
+		// or actually implement the proxy if we have the peer address.
+		// Let's implement redirection in the client instead, or proxy here.
+		return 0, 0, fmt.Errorf("not the leader — redirect to %s", leaderID)
+	}
+
+	// 1. Deduplication mechanism
+	msgStr := string(data)
+	allMsgs := n.store.GetAll()
+	for id, msg := range allMsgs {
+		if msg.Data == msgStr {
+			n.log.Info("duplicate message detected, avoiding replication", "message", msgStr)
+			// Return successful response without appending again
+			var storedIndex uint64
+			fmt.Sscanf(id, "%d", &storedIndex)
+			return storedIndex, msg.Timestamp, nil
+		}
+	}
+
+	// 2. Tick the Lamport clock
 	ts := n.clock.Tick()
 
 	n.log.Debug("publishing message", "timestamp", ts)
 
-	// Forward to the consensus leader for replication
-	index, err := n.consensus.ProposeEntry(data)
-	if err != nil {
-		return 0, err
+	// Create the LogEntry natively pulling exact Term and absolute Log Index mappings
+	term := n.consensus.CurrentTerm()
+	index := n.repLog.LastIndex() + 1
+
+	// 3. Trigger network replication
+	entry := consensus.LogEntry{
+		Index:     index,
+		Term:      term,
+		Timestamp: ts,
+		Data:      data,
+	}
+	
+	if err := n.repManager.ReplicateEntry(entry); err != nil {
+		return 0, 0, fmt.Errorf("replication failed: %w", err)
+	}
+
+	// 4. Wait for quorum (Data Consistency)
+	n.log.Debug("waiting for quorum", "index", index)
+	success, err := n.repManager.WaitForQuorum(index, 2*time.Second)
+	if err != nil || !success {
+		return 0, 0, fmt.Errorf("failed to reach quorum for log index %d", index)
 	}
 
 	// Apply to local store after commit
-	replication.ApplyLogToStore(n.store, index, data)
+	replication.ApplyLogToStore(n.store, index, data, ts, term)
 
-	return index, nil
+	return index, ts, nil
 }
 
 // GetConsensus returns the consensus module for status queries.
@@ -184,8 +239,56 @@ func (n *Node) GetStore() *storage.MessageStore {
 	return n.store
 }
 
+// GetStatus exposes live node identity, the gRPC dial address clients should use, and consensus/log metrics.
+func (n *Node) GetStatus(_ context.Context) (*proto.StatusResponse, error) {
+	var role proto.NodeRole
+	switch n.consensus.State() {
+	case consensus.Candidate:
+		role = proto.NodeRole_NODE_ROLE_CANDIDATE
+	case consensus.Leader:
+		role = proto.NodeRole_NODE_ROLE_LEADER
+	default:
+		role = proto.NodeRole_NODE_ROLE_FOLLOWER
+	}
+	listen := fmt.Sprintf("localhost:%d", n.cfg.Port)
+	return &proto.StatusResponse{
+		NodeId:              n.cfg.NodeID,
+		GrpcListenAddress:   listen,
+		Role:                role,
+		CurrentTerm:         n.consensus.CurrentTerm(),
+		LogLength:           n.repLog.LastIndex(),
+		LeaderId:            n.consensus.LeaderID(),
+		CommitIndex:         n.repLog.CommitIndex(),
+	}, nil
+}
+
 // PrintStatus logs the current state of the node and its consensus status.
 func (n *Node) PrintStatus() {
 	status := n.consensus.FormatClusterStatus()
 	log.Printf("[node] %s", status)
+}
+
+// ---------------------------------------------------------------------------
+// Consensus API implementation
+// ---------------------------------------------------------------------------
+
+func (n *Node) HandleAppendEntries(req *consensus.AppendEntriesRequest) *consensus.AppendEntriesResponse {
+	return n.consensus.HandleAppendEntries(req)
+}
+
+func (n *Node) HandleRequestVote(req *consensus.RequestVoteRequest) *consensus.RequestVoteResponse {
+	return n.consensus.HandleRequestVote(req)
+}
+
+func (n *Node) OnAppendEntriesRecv(entries []consensus.LogEntry, leaderCommit uint64) {
+	for _, entry := range entries {
+		// Update Lamport clock if needed
+		n.clock.Update(entry.Timestamp)
+
+		// Append to local log
+		n.repLog.Append(entry)
+
+		// Apply to message store for consumption
+		replication.ApplyLogToStore(n.store, entry.Index, entry.Data, entry.Timestamp, entry.Term)
+	}
 }

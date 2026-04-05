@@ -13,12 +13,16 @@
 package transport
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"sync"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+
+	"distributed-messaging-system/internal/transport/proto"
 )
 
 // PeerClient manages gRPC connections to peer nodes.
@@ -84,13 +88,29 @@ func (p *PeerClient) SendRequestVote(addr string, req interface{}) (interface{},
 // SendAppendEntries sends an AppendEntries RPC to the peer at the given address.
 // Used for log replication and heartbeats.
 func (p *PeerClient) SendAppendEntries(addr string, req interface{}) (interface{}, error) {
-	_, err := p.GetConnection(addr)
+	conn, err := p.GetConnection(addr)
 	if err != nil {
 		return nil, err
 	}
-	// In full gRPC integration, create a ConsensusService client and call AppendEntries
-	log.Printf("[transport] AppendEntries sent to %s", addr)
-	return nil, nil
+
+	client := proto.NewConsensusServiceClient(conn)
+	
+	// Convert req to proto format
+	appendReq, ok := req.(*proto.AppendEntriesRequest)
+	if !ok {
+		return nil, fmt.Errorf("invalid request type in SendAppendEntries")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	res, err := client.AppendEntries(ctx, appendReq)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Printf("[transport] AppendEntries successfully sent to %s", addr)
+	return res, nil
 }
 
 // CloseAll closes all peer connections.

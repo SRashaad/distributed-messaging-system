@@ -58,8 +58,8 @@ type ConsensusModule interface {
 	HandleAppendEntries(req *AppendEntriesRequest) *AppendEntriesResponse
 
 	// ProposeEntry is called when a client wants to publish a message.
-	// Only valid on the Leader. Returns the assigned log index.
-	ProposeEntry(data []byte) (uint64, error)
+	// Only valid on the Leader. Returns the assigned log index and term.
+	ProposeEntry(data []byte) (uint64, uint64, error)
 }
 
 // RaftNode implements the ConsensusModule interface using ZooKeeper for election.
@@ -394,13 +394,13 @@ func (r *RaftNode) HandleAppendEntries(req *AppendEntriesRequest) *AppendEntries
 
 // ProposeEntry proposes a new entry to be replicated across the cluster.
 // Only valid on the Leader node.
-func (r *RaftNode) ProposeEntry(data []byte) (uint64, error) {
+func (r *RaftNode) ProposeEntry(data []byte) (uint64, uint64, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	// 1. Verify this node is the Leader
 	if r.state != Leader {
-		return 0, errors.New("not the leader — redirect to " + r.leaderID)
+		return 0, 0, errors.New("not the leader — redirect to " + r.leaderID)
 	}
 
 	// 2. Create a new LogEntry
@@ -427,7 +427,7 @@ func (r *RaftNode) ProposeEntry(data []byte) (uint64, error) {
 
 	r.commitIndex = nextIndex
 
-	return entry.Index, nil
+	return entry.Index, entry.Term, nil
 }
 
 // GetID returns the node's unique identifier.

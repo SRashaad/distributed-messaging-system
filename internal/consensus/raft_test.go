@@ -10,7 +10,6 @@
 package consensus
 
 import (
-	"bytes"
 	"testing"
 )
 
@@ -115,7 +114,7 @@ func TestHandleAppendEntries_Heartbeat(t *testing.T) {
 func TestProposeEntry_NotLeader(t *testing.T) {
 	node := NewRaftNode("node1", []string{})
 	
-	_, err := node.ProposeEntry([]byte("test data"))
+	_, _, err := node.ProposeEntry([]byte("test data"))
 	if err == nil {
 		t.Error("ProposeEntry should fail if not leader")
 	}
@@ -129,7 +128,7 @@ func TestProposeEntry_Leader(t *testing.T) {
 	node.commitIndex = 5
 
 	data := []byte("test data")
-	index, err := node.ProposeEntry(data)
+	index, _, err := node.ProposeEntry(data)
 	
 	if err != nil {
 		t.Errorf("ProposeEntry failed: %v", err)

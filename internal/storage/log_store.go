@@ -21,7 +21,14 @@
 // =============================================================================
 package storage
 
-import "distributed-messaging-system/internal/consensus"
+import (
+	"encoding/json"
+	"io"
+	"os"
+	"path/filepath"
+
+	"distributed-messaging-system/internal/consensus"
+)
 
 // LogStore defines the interface for persistent log storage.
 // In a production system, this would write to disk or a database.
@@ -51,44 +58,96 @@ type FileLogStore struct {
 }
 
 // NewFileLogStore creates a new file-based log store at the given path.
-//
-// TODO (optional): Create the directory if it doesn't exist.
 func NewFileLogStore(path string) *FileLogStore {
-	return nil
+	os.MkdirAll(path, 0755)
+	return &FileLogStore{
+		path: path,
+	}
 }
 
 // AppendEntries writes log entries to durable storage.
-//
-// TODO (optional): Serialize entries and write to a file.
 func (f *FileLogStore) AppendEntries(entries []consensus.LogEntry) error {
+	file, err := os.OpenFile(filepath.Join(f.path, "log.jsonl"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	for _, e := range entries {
+		if err := encoder.Encode(e); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
 // GetEntries reads log entries from durable storage.
-//
-// TODO (optional): Read and deserialize entries from the file.
 func (f *FileLogStore) GetEntries(from, to uint64) ([]consensus.LogEntry, error) {
-	return nil, nil
+	file, err := os.Open(filepath.Join(f.path, "log.jsonl"))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	defer file.Close()
+
+	var results []consensus.LogEntry
+	decoder := json.NewDecoder(file)
+	for {
+		var entry consensus.LogEntry
+		if err := decoder.Decode(&entry); err == io.EOF {
+			break
+		} else if err != nil {
+			return nil, err
+		}
+		if entry.Index >= from && entry.Index <= to {
+			results = append(results, entry)
+		}
+	}
+	return results, nil
 }
 
 // TruncateAfter removes all entries after the given index.
-// This is needed when a follower's log conflicts with the leader's.
-//
-// TODO (optional): Truncate the log file at the appropriate position.
 func (f *FileLogStore) TruncateAfter(index uint64) error {
-	return nil
+	entries, err := f.GetEntries(1, index)
+	if err != nil {
+		return err
+	}
+	os.Remove(filepath.Join(f.path, "log.jsonl")) // overwrite
+	return f.AppendEntries(entries)
 }
 
 // SaveState persists currentTerm and votedFor to survive crashes.
-//
-// TODO (optional): Write term and votedFor to a state file.
 func (f *FileLogStore) SaveState(term uint64, votedFor string) error {
-	return nil
+	state := map[string]interface{}{"term": term, "votedFor": votedFor}
+	data, err := json.Marshal(state)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(f.path, "state.json"), data, 0644)
 }
 
 // LoadState loads the previously persisted Raft state on startup.
-//
-// TODO (optional): Read term and votedFor from the state file.
 func (f *FileLogStore) LoadState() (term uint64, votedFor string, err error) {
-	return 0, "", nil
+	data, err := os.ReadFile(filepath.Join(f.path, "state.json"))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return 0, "", nil
+		}
+		return 0, "", err
+	}
+	var state map[string]interface{}
+	if err := json.Unmarshal(data, &state); err != nil {
+		return 0, "", err
+	}
+	
+	if t, ok := state["term"].(float64); ok {
+		term = uint64(t)
+	}
+	if v, ok := state["votedFor"].(string); ok {
+		votedFor = v
+	}
+	return term, votedFor, nil
 }

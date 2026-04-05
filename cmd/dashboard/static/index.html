@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cluster dashboard</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="bg"></div>
+  <header class="top">
+    <h1>Distributed messaging</h1>
+    <p class="sub">Live roles, gRPC targets, replicated log (poll 1s). Default expects five nodes on 5001–5005; override with <code class="kbd">-nodes</code> for 3-node (or larger) clusters.</p>
+  </header>
+
+  <section class="panel map" aria-label="Cluster map">
+    <h2>Cluster</h2>
+    <div id="cluster-cards" class="cluster-cards"></div>
+  </section>
+
+  <div class="bottom-grid">
+    <section class="panel sim" aria-label="Simulator">
+      <h2>Simulator</h2>
+      <label class="field">
+        <span>Target node (gRPC)</span>
+        <select id="target-node"></select>
+      </label>
+      <label class="field">
+        <span>Message</span>
+        <input id="msg-input" type="text" placeholder="Hello cluster" autocomplete="off" />
+      </label>
+      <button id="publish-btn" type="button" class="btn primary">Publish</button>
+      <div class="console" id="console" aria-live="polite"></div>
+    </section>
+
+    <section class="panel log-panel" aria-label="Replicated log">
+      <h2>Replicated log <span class="hint">(Lamport order)</span></h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Logical time</th>
+              <th>Raft index</th>
+              <th>Message</th>
+            </tr>
+          </thead>
+          <tbody id="log-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,310 @@
+:root {
+  --bg0: #0a0c10;
+  --bg1: #12151c;
+  --glass: rgba(255, 255, 255, 0.06);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --text: #e8eaef;
+  --muted: #8b93a7;
+  --leader: #34d399;
+  --leader-glow: rgba(52, 211, 153, 0.45);
+  --follower: #60a5fa;
+  --follower-glow: rgba(96, 165, 250, 0.25);
+  --candidate: #fbbf24;
+  --candidate-glow: rgba(251, 191, 36, 0.35);
+  --dead: #64748b;
+  --dead-bg: rgba(100, 116, 139, 0.15);
+  --danger: #f87171;
+  --radius: 16px;
+  --font: "Segoe UI", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--bg0);
+}
+
+.bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(96, 165, 250, 0.15), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 50%, rgba(52, 211, 153, 0.08), transparent),
+    var(--bg0);
+}
+
+.top {
+  padding: 1.75rem 1.5rem 0.5rem;
+  max-width: 1320px;
+  margin: 0 auto;
+}
+
+.top h1 {
+  margin: 0;
+  font-weight: 600;
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+}
+
+.sub {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.sub .kbd {
+  font-family: ui-monospace, monospace;
+  font-size: 0.82em;
+  padding: 0.12em 0.4em;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border);
+}
+
+.panel {
+  max-width: 1320px;
+  margin: 1rem auto;
+  padding: 1.25rem 1.5rem;
+  background: var(--glass);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+.panel h2 {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.hint {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* Fluid columns: up to 5 nodes in one row on wide screens, wraps on smaller widths */
+.cluster-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: 1rem;
+}
+
+.node-card {
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 2px solid transparent;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, opacity 0.25s ease;
+}
+
+.node-card.leader {
+  border-color: var(--leader);
+  box-shadow: 0 0 24px var(--leader-glow);
+}
+
+.node-card.follower {
+  border-color: rgba(96, 165, 250, 0.55);
+  box-shadow: 0 0 18px var(--follower-glow);
+}
+
+.node-card.candidate {
+  border-color: var(--candidate);
+  box-shadow: 0 0 20px var(--candidate-glow);
+}
+
+.node-card.dead {
+  border-color: rgba(248, 113, 113, 0.4);
+  background: var(--dead-bg);
+  opacity: 0.85;
+}
+
+.node-card .title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.node-card .name {
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+.crown {
+  font-size: 1.25rem;
+  filter: drop-shadow(0 0 6px var(--leader-glow));
+}
+
+.node-card dl {
+  margin: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.node-card dt {
+  margin: 0;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.node-card dd {
+  margin: 0;
+  font-size: 0.9rem;
+  font-family: ui-monospace, monospace;
+  word-break: break-all;
+}
+
+.node-card .role-pill {
+  display: inline-block;
+  margin-top: 0.5rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.node-card.leader .role-pill {
+  background: rgba(52, 211, 153, 0.2);
+  color: var(--leader);
+}
+
+.node-card.follower .role-pill {
+  background: rgba(96, 165, 250, 0.2);
+  color: var(--follower);
+}
+
+.node-card.candidate .role-pill {
+  background: rgba(251, 191, 36, 0.2);
+  color: var(--candidate);
+}
+
+.node-card.dead .role-pill {
+  background: rgba(248, 113, 113, 0.15);
+  color: var(--danger);
+}
+
+.bottom-grid {
+  max-width: 1320px;
+  margin: 0 auto 2rem;
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 1rem;
+  padding: 0 0 0 1rem;
+  padding-right: 1rem;
+}
+
+@media (max-width: 900px) {
+  .bottom-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.field input,
+.field select {
+  padding: 0.55rem 0.65rem;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.btn {
+  padding: 0.55rem 1.1rem;
+  border-radius: 10px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+
+.btn:hover {
+  filter: brightness(1.08);
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  color: #fff;
+}
+
+.console {
+  margin-top: 1rem;
+  min-height: 120px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--glass-border);
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  color: #cbd5e1;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+thead {
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.72rem;
+}
+
+th,
+td {
+  padding: 0.55rem 0.65rem;
+  text-align: left;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+td.mono {
+  font-family: ui-monospace, monospace;
+}

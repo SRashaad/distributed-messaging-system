@@ -26,8 +26,16 @@ Thumbs.db
 # Dependencies
 /vendor/
 
+# Local cluster script logs
+/.cluster-logs/
+
 # Build output
 /dist/
+
+# Protobuf tools
+/protoc_bin/
+/.tools/
+protoc.zip
 
 # Environment
 .env

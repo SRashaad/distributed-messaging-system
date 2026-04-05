@@ -32,6 +32,11 @@ func (l *Logger) Error(msg string, args ...any) {
 	l.base.Error(msg, args...)
 }
 
+// Warn logs warning events.
+func (l *Logger) Warn(msg string, args ...any) {
+	l.base.Warn(msg, args...)
+}
+
 // Debug logs debug events.
 func (l *Logger) Debug(msg string, args ...any) {
 	l.base.Debug(msg, args...)
