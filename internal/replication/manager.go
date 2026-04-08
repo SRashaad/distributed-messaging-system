@@ -128,10 +128,13 @@ func (m *Manager) WaitForQuorum(index uint64, timeout time.Duration) (bool, erro
 
 	for time.Now().Before(deadline) {
 		if m.quorum.HasQuorum(index) {
+			log.Printf("[replication] quorum reached for index=%d (acks=%d)", index, m.quorum.AckCount(index))
 			return true, nil
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
+
+	log.Printf("[replication] quorum timeout for index=%d after %v (acks=%d)", index, timeout, m.quorum.AckCount(index))
 
 	return false, nil
 }

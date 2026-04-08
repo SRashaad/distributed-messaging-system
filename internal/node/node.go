@@ -223,8 +223,19 @@ func (n *Node) PublishMessage(data []byte) (uint64, uint64, error) {
 		return 0, 0, fmt.Errorf("failed to reach quorum for log index %d", index)
 	}
 
+	n.log.Info("quorum reached for publish",
+		"index", index,
+		"term", term,
+		"timestamp", ts,
+	)
+
 	// Apply to local store after commit
 	replication.ApplyLogToStore(n.store, index, data, ts, term)
+	n.log.Info("entry committed and applied",
+		"index", index,
+		"term", term,
+		"timestamp", ts,
+	)
 
 	return index, ts, nil
 }
